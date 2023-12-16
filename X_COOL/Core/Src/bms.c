@@ -30,12 +30,15 @@ event_id bms_id;
 #define BAT_FULCHARGE_VOLTAGE      (4150*BATTERY_CELL)
 #define BAT_MIN_VOLTATE            (BAT_CEL_MIN_VOLTAGE*BATTERY_CELL)
 #define BAT_PROTECT_VOTAGE         (2500*BATTERY_CELL)
-#define BAT_RECHARGING_VOLTAGE     (4100*BATTERY_CELL)
+#define BAT_RECHARGING_VOLTAGE     (4000*BATTERY_CELL)
 #define CHARGE_PRODUCTIVITY        80//Percent
 #define POWER_SUPPLY_VOLTAGE_MIN    (BAT_FULCHARGE_VOLTAGE + 2000) //mV
-#define TIME_COUNT_FULL_CHARGE     (15 * 1000/ BMS_TASK_DUTY_MS)
+#define TIME_FULL_CHARGE_SECOND     15
 
 #define DISCHARGE_CURRENT_BOARD_SLEEP   50 //mA
+
+
+#define SECOND_TO_COUNT(x)       (1000*x/BMS_TASK_DUTY_MS)
 
 static bq25731_t bq25731;
 
@@ -170,8 +173,10 @@ void bms_task(void)
 			{
 				bms_state = BMS_DISCHARGE_STATE;
 			}
+
 			break;
 		case BMS_CHARGING_STATE:
+			bq25731_set_charge_voltage(BAT_FULCHARGE_VOLTAGE); //Set charge voltage
 			bq25731_set_charge_current(MAX_CHARGE_CURRENT); //Turn on charge
 			charge.full_charge_count = 0;
 			bms_state = BMS_CHARGING_WAITING_STATE;
@@ -182,40 +187,51 @@ void bms_task(void)
 			if(charge.charge_current <= CHARGE_CURRENT_RESOLUTION)
 			{
 				charge.full_charge_count++;
-				if(charge.full_charge_count > TIME_COUNT_FULL_CHARGE)    //Charge in 15s to charge 95% and not stress to protect battery
+				if(charge.charge_current == 0)
 				{
-					bms_state = BMS_CHARGE_FULL_STATE;
+					charge.full_charge_count += SECOND_TO_COUNT(TIME_FULL_CHARGE_SECOND/3);
 				}
+			}else
+			{
+				charge.full_charge_count = 0;
+			}
+			if(charge.full_charge_count > SECOND_TO_COUNT(TIME_FULL_CHARGE_SECOND))    //Charge in 15s to charge 95% and not stress to protect battery
+			{
+				bms_state = BMS_CHARGE_FULL_STATE;
+				charge.is_charge = 0;
 			}
 			if(charge.bus_voltage < POWER_SUPPLY_VOLTAGE_MIN) //If power off
 			{
+				charge.is_charge = 0;
 				bms_state = BMS_DISCHARGE_STATE;
 			}
 			break;
 		case BMS_CHARGE_FULL_STATE:
 			SOC_charge_full_recalibrate();
 			bq25731_set_charge_current(0);
-			charge.is_charge = 0;
 			bms_state = BMS_CHARGE_FULL_WATING_STATE;
 			break;
 		case BMS_CHARGE_FULL_WATING_STATE:
-			if(charge.bat_voltage <= BAT_RECHARGING_VOLTAGE) //If bat voltage is go down minimum -> need to charge again
+			if(charge.bus_voltage < POWER_SUPPLY_VOLTAGE_MIN) //If power off
+			{
+				bms_state = BMS_DISCHARGE_STATE; //Change power source to bat
+			}
+			if(charge.bat_voltage < charge.bat_min_voltage) //Check if bat is remove or destroy
+			{
+				bms_state = BMS_BAT_SHUTDOWN_STATE;
+			}else if (charge.bat_voltage < BAT_RECHARGING_VOLTAGE)
 			{
 				bms_state = BMS_START_STATE;
 			}
-			if(charge.bus_voltage < POWER_SUPPLY_VOLTAGE_MIN) //If power off
-			{
-				bms_state = BMS_DISCHARGE_STATE;
-			}
+
 			break;
-		case BMS_DISCHARGE_STATE:
+		case BMS_DISCHARGE_STATE: //bat provide power
 			bms_state = BMS_DISCHARGE_WAITING_STATE;
 			bq25731_set_charge_current(0);
 			charge.is_charging = 0;
 			charge.is_charge = 0;
 			break;
 		case BMS_DISCHARGE_WAITING_STATE:
-
 			if(charge.bus_voltage > POWER_SUPPLY_VOLTAGE_MIN) //Check power back on
 			{
 				bms_state = BMS_START_STATE;
@@ -226,6 +242,7 @@ void bms_task(void)
 			}
 			break;
 		case BMS_BAT_SHUTDOWN_STATE:
+			charge.is_charging = 0;
 			if(charge.bus_voltage > POWER_SUPPLY_VOLTAGE_MIN) //Check power back on
 			{
 				if(charge.bat_voltage > BAT_PROTECT_VOTAGE)
@@ -247,6 +264,7 @@ void bms_task(void)
 HAL_StatusTypeDef bms_init(void)
 {
 	//Config battery param
+
 	HAL_StatusTypeDef status = 0;
 	status = bq25731_charge_option_0_clear_bit(0, EN_LPWR_BIT); //Disable low power function for ADC convert block work
 	if(status != HAL_OK) return status;
@@ -254,7 +272,8 @@ HAL_StatusTypeDef bms_init(void)
 	if(status != HAL_OK) return status;
 	status = bq25731_charge_option_3(0,EN_ICO_MODE_BIT); //Enable Auto mode
 	if(status != HAL_OK) return status;
-	status = bq25731_set_charge_voltage(BAT_FULCHARGE_VOLTAGE); //Set charge voltage
+//	status = bq25731_set_charge_voltage(BAT_FULCHARGE_VOLTAGE); //Set charge voltage
+	status = bq25731_set_charge_current(0);
 	if(status != HAL_OK) return status;
 	status = bq25731_set_bit_reg(INPUT_CURRENT_LIMIT_USE_REG, 0,INPUT_CURRENT_3200_MA_BIT); //Set max current input of power source
 	if(status != HAL_OK) return status;
@@ -289,7 +308,6 @@ HAL_StatusTypeDef bms_init(void)
 //	Add task run 1 second duty
 	event_add(bms_task, &bms_id, BMS_TASK_DUTY_MS);
 	event_active(&bms_id);
-
 	return status;
 }
 

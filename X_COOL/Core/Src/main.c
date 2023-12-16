@@ -28,7 +28,7 @@
 #include "sai.h"
 #include "spi.h"
 #include "usart.h"
-//#include "usb_host.h"
+#include "usb_host.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -43,7 +43,7 @@
 #include "board.h"
 #include "lcd_interface.h"
 #include "main_app.h"
-//#include "logging.h"
+#include "logging.h"
 #include "bms.h"
 #include "power_board.h"
 #include "led_signal.h"

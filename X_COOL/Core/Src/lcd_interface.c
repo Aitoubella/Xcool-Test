@@ -137,7 +137,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SERVICE_CALIBRATION_STATE;
 				break;
 			case LCD_SERVICE_BACK_STATE:
-				lcd_state = LCD_SERVICE_STATE;
+				lcd_state = LCD_MAIN_STATE;
 				break;
 			//level 3 enter to level 4
 			//date time

@@ -14,7 +14,7 @@
 #include "flash.h"
 #include "event.h"
 #include "buzzer.h"
-//#include "logging.h"
+#include "logging.h"
 #include "board.h"
 #include "power_board.h"
 #include "bms.h"
@@ -227,8 +227,8 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 
 		case LCD_USB_INSERT_DOWNLOAD_EVT:
 			printf("\nStart download ");
-			//sprintf(file_name_src,"%s%s",USERPath,LOG_FILE_NAME);
-			//sprintf(file_name_dst,"%s%s",USBHPath,LOG_FILE_NAME);
+			sprintf(file_name_src,"%s%s",USERPath,LOG_FILE_NAME);
+			sprintf(file_name_dst,"%s%s",USBHPath,LOG_FILE_NAME);
 			if(copy_file(file_name_dst,file_name_src) == FR_OK)
 			{
 				printf("success!");
