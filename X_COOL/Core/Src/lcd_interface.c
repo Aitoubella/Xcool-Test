@@ -138,6 +138,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				break;
 			case LCD_SERVICE_BACK_STATE:
 				lcd_state = LCD_MAIN_STATE;
+				lcd_get_set_cb(LCD_MAIN_FRAME_EVT, NULL);
 				break;
 			//level 3 enter to level 4
 			//date time
@@ -295,6 +296,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SERVICE_CALIBRATION_TEMP_OFFSET_STATE;
 				break;
 			}
+			lcd_get_set_cb(LCD_POWER_SHORT_PRESS_EVT, NULL);
 
 		}else if(evt == BUTTON_HOLD_2_SEC)
 		{

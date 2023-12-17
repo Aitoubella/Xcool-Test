@@ -26,7 +26,7 @@
 #define RTC_TASK_TICK_MS          1000
 #define BAT_OUT_OF_VALUE     7 //in perent
 #define MINUTE_TO_COUNT(x) (x*60*1000/MAIN_TASK_TICK_MS) //convert minute to tick count in main task
-
+#define SECOND_TO_COUNT(x) (x*1000/MAIN_TASK_TICK_MS)
 #define buzzer_lid_warning()          buzzer_togle(50, 2000, 0);
 #define buzzer_over_temp_warning()    buzzer_togle(100, 1000, 0);
 #define buzzer_under_temp_warning()   buzzer_togle(100, 1000, 0);
@@ -42,6 +42,9 @@ double limit_min = 0;
 #define LID_SWITCH_SENSOR                     RTD4
 
 #define LID_CLOSE_DELAY_MINS                   1
+
+#define TEMPERATURE_SHOW_INTERVAL              30 //Second
+
 
 typedef enum
 {
@@ -87,8 +90,20 @@ typedef struct
 output_ctrl_t ctl = {0};
 alarm_count_t alarm_count;
 
-uint32_t lid_delay_count = MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS);
-uint32_t logging_count = 0;
+typedef struct
+{
+	uint32_t lid;
+	uint32_t logging;
+	uint32_t temper;
+}interval_count_t;
+
+interval_count_t interval_count =
+{
+	.lid = MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS),
+	.temper = SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL),
+};
+
+
 main_state_t main_state = MAIN_NORMAL_STATE;
 buzzer_state_t buzzer_state  = BUZZER_OFF_STATE;
 save_state_t save_state = NONE_SAVE_STATE;
@@ -118,7 +133,7 @@ lcd_inter_t setting = {
 	.datetime.year = 2023,
 	.datetime.month = 11,
 	.datetime.day = 3,
-	.alarm_mute_duration = 0,
+	.alarm_mute_duration = 1,//Minute
 };
 extern lcd_inter_t lcd;
 extern lcd_state_t lcd_state;
@@ -177,7 +192,7 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 		case LCD_SET_ALARM_TEMPERATURE_DELAY_EVT:
 			if(setting.alarm_temperature_delay != *((uint8_t *)value))
 			{
-				 save_state = CHANGE_DATA_STATE;
+				save_state = CHANGE_DATA_STATE;
 				setting.alarm_temperature_delay = *((uint8_t *)value);
 			}
 			break;
@@ -216,12 +231,11 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 			}
 			break;
 		case LCD_SET_LARM_MUTE_DURATION_EVT:
-			if(main_state != MAIN_NORMAL_STATE) //Set alarm mute only effect when in warning
+			if(setting.alarm_mute_duration != *((uint8_t *)value))
 			{
-				if(setting.alarm_mute_duration != *((uint8_t *)value))
-				{
-					setting.alarm_mute_duration = *((uint8_t *)value);
-				}
+				save_state = CHANGE_DATA_STATE;
+				setting.alarm_mute_duration = *((uint8_t *)value);
+				alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
 			}
 			break;
 
@@ -253,6 +267,9 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 		case LCD_PWER_ON_EVT:
 //			LED_H(); //Turn on  Back Light led
 			pwr_ctrl_on();
+			break;
+		case LCD_POWER_SHORT_PRESS_EVT:
+			alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
 			break;
 	}
 	if(save_state == NEED_SAVE_STATE)// setting param change?
@@ -343,6 +360,9 @@ void main_task(void)
 	setting.lid_state = get_lid_state();
 
 
+	//temperature delay interval implement
+	interval_count.temper ++;
+
 	//Check exeed temperature setting
 	if(setting.op_mode == OPERATION_MODE_FRIDEGE)
 	{
@@ -418,7 +438,7 @@ void main_task(void)
 	{
 		//Increase count for delay check later
 		alarm_count.lid_open += 1;
-		lid_delay_count = 0;
+		interval_count.lid = 0;
 		//when lid is opened, compressor, condenser fan and chamber fan turned off.
 		ctl.cmprsr = TURN_OFF;
 		ctl.cmprsr_fan = TURN_OFF;
@@ -426,13 +446,13 @@ void main_task(void)
 	}else //Lid close
 	{
 		alarm_count.lid_open = 0;
-		lid_delay_count ++;
+		interval_count.lid ++;
 	}
 
 
 
    //All turns back on when lid is closed although we require a compressor on delay of 1-2 mins(settable in service mode)
-	if(lid_delay_count < MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS))
+	if(interval_count.lid < MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS))
 	{
 		ctl.cmprsr = TURN_OFF;
 		ctl.cmprsr_fan = TURN_OFF;
@@ -508,15 +528,25 @@ void main_task(void)
 			{
 				//Check current value is differ from lcd value -> update lcd
 				lcd_param =  lcd_interface_get_param();
+				if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
+				{
+					if(lcd_param->temperature != setting.temperature)
+					{
+						lcd_param->temperature = setting.temperature;
+						interval_count.temper = 0;
+						lcd_interface_show(lcd_state);
+					}
+				}
+
 				if(lcd_param->op_mode != setting.op_mode || lcd_param->pwr_mode != setting.pwr_mode
-				  || lcd_param->temperature != setting.temperature || lcd_param->bat_state != setting.bat_state
+				  || lcd_param->bat_state != setting.bat_state
 				  || lcd_param->bat_value != setting.bat_value || lcd_param->spk_mode != setting.spk_mode
 				  || lcd_param->bat_signal != setting.bat_signal)
 				{
 					//Update lcd main frame
 					lcd_param->op_mode = setting.op_mode;
 					lcd_param->pwr_mode = setting.pwr_mode;
-					lcd_param->temperature = setting.temperature;
+//					lcd_param->temperature = setting.temperature;
 					lcd_param->bat_state = setting.bat_state;
 					lcd_param->bat_value = setting.bat_value;
 					lcd_param->spk_mode = setting.spk_mode;
@@ -568,28 +598,23 @@ void main_task(void)
 				{
 					buzzer_state = BUZZER_OFF_STATE;
 				}
+				alarm_count.alarm_mute = 0;
 			}else //Still warning?
 			{
-				if(setting.alarm_mute_duration > 0) //Delay alarm sound?
+				if(alarm_count.alarm_mute > 0) alarm_count.alarm_mute--;
+				if(alarm_count.alarm_mute == 0)
 				{
-					setting.spk_mode = SPEAKER_MODE_OFF; //LCD speaker off
-					if(buzzer_state != BUZZER_OFF_WAITING_STATE)
-					{
-						buzzer_state = BUZZER_OFF_STATE;
-					}
-					alarm_count.alarm_mute ++;
-					if(alarm_count.alarm_mute >= MINUTE_TO_COUNT(setting.alarm_mute_duration))
-					{
-						setting.spk_mode = SPEAKER_MODE_ON; //Lcd speaker on again
-						setting.alarm_mute_duration = 0;//Reset alarm mute to 0
-						lcd.alarm_mute_duration = 0; //Reset lcd alarm mute to 0
-						alarm_count.alarm_mute = 0;
-					}
-				}else //Delay alarm sound timeout or not set
-				{
+					setting.spk_mode = SPEAKER_MODE_ON; //Lcd speaker on again
 					if(buzzer_state != BUZZER_ON_WATING_STATE)
 					{
 						buzzer_state = BUZZER_ON_STATE;
+					}
+				}else
+				{
+					setting.spk_mode = SPEAKER_MODE_OFF; //Lcd speaker off
+					if(buzzer_state != BUZZER_OFF_WAITING_STATE)
+					{
+						buzzer_state = BUZZER_OFF_STATE;
 					}
 				}
 			}
@@ -624,10 +649,10 @@ void main_task(void)
 
 
 	//Logging timeline
-	logging_count++;
-	if(logging_count >= MINUTE_TO_COUNT(setting.logging_interval))
+	interval_count.logging++;
+	if(interval_count.logging >= MINUTE_TO_COUNT(setting.logging_interval))
 	{
-		logging_count = 0;
+		interval_count.logging = 0;
 		//logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
 	}
 }
@@ -642,7 +667,6 @@ void main_app_init(void)
 	flash_mgt_read((uint32_t *)&setting, sizeof(lcd_inter_t));
 	//Load all current param to lcd param
 	memcpy((uint8_t *)&lcd,(uint8_t *)&setting, sizeof(lcd_inter_t));
-	setting.alarm_mute_duration = 0; //Reset mute alarm duration, because it must be zero. alarm duration only effect when set from LCD
     //PID set param
     PID_init();
 	PID_tune(KP,KI,KD);

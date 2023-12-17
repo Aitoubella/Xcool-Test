@@ -184,6 +184,8 @@ typedef enum
 
 	LCD_POWER_OFF_EVT,
 	LCD_PWER_ON_EVT,
+
+	LCD_POWER_SHORT_PRESS_EVT,
 }lcd_get_set_evt_t;
 
 void lcd_interface_init(void);

@@ -79,13 +79,13 @@ FRESULT logging_write(char* file, lcd_inter_t* dat)
 			                        dat->datetime.year, dat->datetime.month, dat->datetime.day, dat->datetime.hour, dat->datetime.minute, dat->datetime.second,op_mode_str[dat->op_mode],temperature_set,
 									dat->temperature, dat->bat_value, bat_state_str[dat->bat_state], power_mode_str[dat->pwr_mode], lid_state_str[dat->lid_state], warning_type_str[dat->warning_type],speaker_mode_str[dat->spk_mode]);
 	UINT bytesWrote;
-	//fres = f_write(&USERFile, usb_buffer, len, &bytesWrote);
+	fres = f_write(&USERFile, usb_buffer, len, &bytesWrote);
 	if(fres == FR_OK)
 	{
-		//printf("\r\nWrote %i bytes to %s!", bytesWrote, file);
+		printf("\r\nWrote %i bytes to %s!", bytesWrote, file);
 	} else
 	{
-		//printf("\r\nf_write error (%i)", fres);
+		printf("\r\nf_write error (%i)", fres);
 	}
 
 	//Be a tidy kiwi - don't forget to close your file!
