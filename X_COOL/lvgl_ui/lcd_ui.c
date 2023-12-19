@@ -652,51 +652,56 @@ void lcd_service_calibration_set(int8_t value)
 	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
 }
 
-void lcd_service_temperature_fridge(service_temperature_fridge_t index, int8_t value)
+void lcd_service_temperature_fridge(service_temperature_fridge_t index)
 {
 	lcd_ui_t fridge = FONT_VERDENA_36;
-	lcd_ui_t set_point = FONT_VERDENA_36;
-	lcd_ui_t temper = FONT_VERDENA_24;
+	lcd_ui_t setpoint = FONT_VERDENA_24;
+	lcd_ui_t deviation = FONT_VERDENA_24;
 	lcd_ui_t back = FONT_VERDENA_24;
 
-	if(index == SERVICE_TEMPERATURE_FRIDGE_VALUE)
+	if(index == SERVICE_TEMPERATURE_FRIDGE_SETPOINT)
 	{
-		temper.font = &ui_font_verdana364;
-	}else
+		setpoint.font = &ui_font_verdana404;
+	}else if(index == SERVICE_TEMPERATURE_FRIDGE_DEVIATION)
 	{
-		back.font = &ui_font_verdana364;
+		deviation.font = &ui_font_verdana404;
+	}else if(index == SERVICE_TEMPERATURE_FRIDGE_BACK)
+	{
+		back.font = &ui_font_verdana404;
 	}
 
 	lcd_label_set_param(fridge.obj, "Fridge", 0, -96, fridge.font, WHITE_COLOR);
-	lcd_label_set_param(set_point.obj, "Set Point", 0, -48, set_point.font, WHITE_COLOR);
-	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value);
-	lcd_label_set_param(temper.obj,temp_buff, 0, 8, temper.font, WHITE_COLOR);
+	lcd_label_set_param(setpoint.obj, "Set Point", 0, -29, setpoint.font, WHITE_COLOR);
+	lcd_label_set_param(deviation.obj, "Temp Deviation", 0, 10, deviation.font, WHITE_COLOR);
 	lcd_label_set_param(back.obj, "Back", 0, 51, back.font, WHITE_COLOR);
 }
 
-void lcd_service_temperature_freezer(service_temperature_freezer_t index, int8_t value)
+void lcd_service_temperature_freezer(service_temperature_freezer_t index)
 {
 	lcd_ui_t freezer = FONT_VERDENA_36;
-	lcd_ui_t set_point = FONT_VERDENA_36;
-	lcd_ui_t temper = FONT_VERDENA_24;
+	lcd_ui_t setpoint = FONT_VERDENA_24;
+	lcd_ui_t deviation = FONT_VERDENA_24;
 	lcd_ui_t back = FONT_VERDENA_24;
 
-	if(index == SERVICE_TEMPERATURE_FREEZER_VALUE)
+	if(index == SERVICE_TEMPERATURE_FREEZER_SETPOINT)
 	{
-		temper.font = &ui_font_verdana364;
-	}else
+		setpoint.font = &ui_font_verdana404;
+	}else if(index == SERVICE_TEMPERATURE_FREEZER_DEVIATION)
 	{
-		back.font = &ui_font_verdana364;
+		deviation.font = &ui_font_verdana404;
+	}else if(index == SERVICE_TEMPERATURE_FREEZER_BACK)
+	{
+		back.font = &ui_font_verdana404;
 	}
 
 	lcd_label_set_param(freezer.obj, "Freezer", 0, -96, freezer.font, WHITE_COLOR);
-	lcd_label_set_param(set_point.obj, "Set Point", 0, -48, set_point.font, WHITE_COLOR);
-	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value);
-	lcd_label_set_param(temper.obj, temp_buff, 0, 8, temper.font, WHITE_COLOR);
+	lcd_label_set_param(setpoint.obj, "Set Point", 0, -29, setpoint.font, WHITE_COLOR);
+	lcd_label_set_param(deviation.obj, "Temp Deviation", 0, 10, deviation.font, WHITE_COLOR);
 	lcd_label_set_param(back.obj, "Back", 0, 51, back.font, WHITE_COLOR);
 }
 
-void lcd_service_temperature_fridge_set(int8_t value)
+
+void lcd_service_temperature_fridge_setpoint_set(int8_t value)
 {
 	lcd_ui_t mode = FONT_VERDENA_36;
 	lcd_ui_t set_point = FONT_VERDENA_36;
@@ -716,7 +721,28 @@ void lcd_service_temperature_fridge_set(int8_t value)
 	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
 }
 
-void lcd_service_temperature_freezer_set(int8_t value)
+void lcd_service_temperature_fridge_deviation_set(int8_t value)
+{
+	lcd_ui_t mode = FONT_VERDENA_36;
+	lcd_ui_t set_point = FONT_VERDENA_36;
+	lcd_ui_t temper_1 = FONT_VERDENA_24;
+	lcd_ui_t temper_2 = FONT_VERDENA_40;
+	lcd_ui_t temper_3 = FONT_VERDENA_24;
+
+
+	lcd_label_set_param(mode.obj, "Fridge", 0, -96, mode.font, WHITE_COLOR);
+
+	lcd_label_set_param(set_point.obj, "Deviation", 0, -48, set_point.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value + 1);
+	lcd_label_set_param(temper_1.obj, temp_buff, 0, 0, temper_1.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value);
+	lcd_label_set_param(temper_2.obj, temp_buff, 0, 37, temper_2.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value - 1);
+	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
+}
+
+
+void lcd_service_temperature_freezer_setpoint_set(int8_t value)
 {
 	lcd_ui_t mode = FONT_VERDENA_36;
 	lcd_ui_t set_point = FONT_VERDENA_36;
@@ -728,6 +754,27 @@ void lcd_service_temperature_freezer_set(int8_t value)
 	lcd_label_set_param(mode.obj, "Freezer", 0, -96, mode.font, WHITE_COLOR);
 
 	lcd_label_set_param(set_point.obj, "Set Point", 0, -48, set_point.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value + 1);
+	lcd_label_set_param(temper_1.obj, temp_buff, 0, 0, temper_1.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value);
+	lcd_label_set_param(temper_2.obj, temp_buff, 0, 37, temper_2.font, WHITE_COLOR);
+	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value - 1);
+	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
+}
+
+
+void lcd_service_temperature_freezer_deviation_set(int8_t value)
+{
+	lcd_ui_t mode = FONT_VERDENA_36;
+	lcd_ui_t set_point = FONT_VERDENA_36;
+	lcd_ui_t temper_1 = FONT_VERDENA_24;
+	lcd_ui_t temper_2 = FONT_VERDENA_40;
+	lcd_ui_t temper_3 = FONT_VERDENA_24;
+
+
+	lcd_label_set_param(mode.obj, "Freezer", 0, -96, mode.font, WHITE_COLOR);
+
+	lcd_label_set_param(set_point.obj, "Deviation", 0, -48, set_point.font, WHITE_COLOR);
 	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value + 1);
 	lcd_label_set_param(temper_1.obj, temp_buff, 0, 0, temper_1.font, WHITE_COLOR);
 	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value);

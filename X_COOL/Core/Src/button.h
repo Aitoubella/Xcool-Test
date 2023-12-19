@@ -10,6 +10,12 @@ typedef enum
 	BTN_MAX
 }button_num_t;
 
+typedef struct
+{
+    uint32_t depressed;
+    uint32_t previous;
+}debounce_t ;
+
 
 
 typedef enum
@@ -24,9 +30,27 @@ typedef enum
 	BUTTON_TAP_TAP,
 }btn_evt_t;
 
-
 typedef void (*btn_cb_t)(uint8_t btn_num, btn_evt_t evt);
 
-void button_init(btn_cb_t cb);
 
+typedef struct
+{
+	GPIO_TypeDef* gpio;
+	uint16_t pin;
+	debounce_t debounce;
+	uint8_t logic_active;
+	btn_cb_t cb;
+	uint32_t time_glictch;
+	uint32_t push_count;
+	uint32_t release_count;
+	uint8_t state;
+	uint8_t lock;
+}button_t;
+
+extern button_t btn[BTN_MAX];
+
+
+void button_init(btn_cb_t cb);
+void button_lock(button_t* btn);
+void button_unlock(button_t* btn);
 #endif

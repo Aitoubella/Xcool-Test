@@ -22,25 +22,8 @@ event_id button_id;
 static void btn_evt_cb_default(uint8_t btn_num, btn_evt_t evt);
 static btn_cb_t btn_evt_cb = btn_evt_cb_default;
 
-typedef struct
-{
-    uint32_t depressed;
-    uint32_t previous;
-}debounce_t ;
 
 
-typedef struct
-{
-	GPIO_TypeDef* gpio;
-	uint16_t pin;
-	debounce_t debounce;
-	uint8_t logic_active;
-	btn_cb_t cb;
-	uint32_t time_glictch;
-	uint32_t push_count;
-	uint32_t release_count;
-	uint8_t state;
-}button_t;
 
 enum
 {
@@ -58,7 +41,7 @@ enum
 	BUTTON_HOLDING_10S_STATE,
 };
 
-static button_t btn[BTN_MAX] = BUTTON_LIST;
+button_t btn[BTN_MAX] = BUTTON_LIST;
 
 
 /**
@@ -88,11 +71,20 @@ void btn_evt_cb_default(uint8_t btn_num, btn_evt_t evt)
 
 }
 
+void button_lock(button_t* btn)
+{
+	//btn->lock = 1;
+}
 
+void button_unlock(button_t* btn)
+{
+	//btn->lock = 0;
+}
 void button_task(void)
 {
 	for(uint8_t btn_num = 0; btn_num < BTN_MAX; btn_num++)
 	{
+		//if(btn[btn_num].lock) continue; //Skip btn lock for not read logic purpose
 		uint32_t logic = button_debounce(&btn[btn_num].debounce, button_read_pin(btn_num));
 		if(btn[btn_num].logic_active == logic)
 		{

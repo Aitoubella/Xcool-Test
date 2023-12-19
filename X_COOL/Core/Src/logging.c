@@ -64,19 +64,23 @@ FRESULT logging_write(char* file, lcd_inter_t* dat)
 		return fres;
 	}
 	static uint8_t len = 0;
-	static uint16_t temperature_set = 0;
+	static int8_t setpoint_set = 0;
+	static int8_t deviation_set = 0;
 	//Date and timeOperation mode, temperature, bat value , bat state, power mode, lid state, warning,
 	if(dat->op_mode == OPERATION_MODE_FREEZER)
 	{
-		temperature_set = dat->temperature_freezer;
+		setpoint_set = dat->setpoint_freezer;
+		deviation_set = dat->deviation_freezer;
 	}else if(dat->op_mode == OPERATION_MODE_FRIDEGE)
 	{
-		temperature_set = dat->temperature_fridge;
+		setpoint_set = dat->setpoint_fridge;
+		deviation_set = dat->deviation_fridge;
 	}
 
+
 	//Copy in a string
-	len = sprintf((char*)usb_buffer, "%d/%d/%d %d:%d:%d,%s, %d,%d,%d,%s,%s,%s,%s,%s\r\n",
-			                        dat->datetime.year, dat->datetime.month, dat->datetime.day, dat->datetime.hour, dat->datetime.minute, dat->datetime.second,op_mode_str[dat->op_mode],temperature_set,
+	len = sprintf((char*)usb_buffer, "%d/%d/%d %d:%d:%d,%s,%d,%d,%d,%d,%s,%s,%s,%s,%s\r\n",
+			                        dat->datetime.year, dat->datetime.month, dat->datetime.day, dat->datetime.hour, dat->datetime.minute, dat->datetime.second,op_mode_str[dat->op_mode],setpoint_set, deviation_set,
 									dat->temperature, dat->bat_value, bat_state_str[dat->bat_state], power_mode_str[dat->pwr_mode], lid_state_str[dat->lid_state], warning_type_str[dat->warning_type],speaker_mode_str[dat->spk_mode]);
 	UINT bytesWrote;
 	fres = f_write(&USERFile, usb_buffer, len, &bytesWrote);

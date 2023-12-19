@@ -115,15 +115,18 @@ typedef enum
 
 typedef enum
 {
-	SERVICE_TEMPERATURE_FRIDGE_VALUE = 0,
+	SERVICE_TEMPERATURE_FRIDGE_SETPOINT = 0,
+	SERVICE_TEMPERATURE_FRIDGE_DEVIATION,
 	SERVICE_TEMPERATURE_FRIDGE_BACK,
 }service_temperature_fridge_t;
 
 typedef enum
 {
-	SERVICE_TEMPERATURE_FREEZER_VALUE = 0,
+	SERVICE_TEMPERATURE_FREEZER_SETPOINT = 0,
+	SERVICE_TEMPERATURE_FREEZER_DEVIATION,
 	SERVICE_TEMPERATURE_FREEZER_BACK,
 }service_temperature_freezer_t;
+
 
 typedef enum
 {
@@ -226,10 +229,12 @@ void lcd_service_data_logging(service_data_logging_t index);
 void lcd_service_data_logging_set(uint8_t value);
 void lcd_service_calibration(service_calibration_t index);
 void lcd_service_calibration_set(int8_t value);
-void lcd_service_temperature_fridge(service_temperature_fridge_t index, int8_t value);
-void lcd_service_temperature_fridge_set(int8_t value);
-void lcd_service_temperature_freezer(service_temperature_freezer_t index, int8_t value);
-void lcd_service_temperature_freezer_set(int8_t value);
+void lcd_service_temperature_fridge(service_temperature_fridge_t index);
+void lcd_service_temperature_fridge_setpoint_set(int8_t value);
+void lcd_service_temperature_fridge_deviation_set(int8_t value);
+void lcd_service_temperature_freezer(service_temperature_freezer_t index);
+void lcd_service_temperature_freezer_setpoint_set(int8_t value);
+void lcd_service_temperature_freezer_deviation_set(int8_t value);
 void lcd_service_alarm_temperature(service_alarms_temperature_t index);
 void lcd_service_alarm_temperature_temp_deviation_set(int8_t value);
 void lcd_service_alarm_temperature_alarm_delay_set(uint8_t value);

@@ -23,11 +23,12 @@ lcd_inter_t lcd =
 
 void button_cb(uint8_t btn_num, btn_evt_t evt)
 {
-
 	static uint8_t has_event = 0;
+	static uint8_t lock_button = 0;
 	switch(btn_num)
 	{
 	case BTN_ENTER:
+		//lock_button = 0;
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event = 1;
@@ -104,10 +105,10 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FREEZER_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_BACK_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_STATE;
@@ -196,26 +197,41 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_CONTINUE_STATE;
 				break;
 			//Temperature go in set
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_SET_STATE;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_SET_STATE;
 				break;
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_SET_STATE;
-				break;
-			//Temperature back to previous
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_SET_STATE:
-				lcd_get_set_cb(LCD_SET_TEMPERATURE_FRIDGE_EVT, &lcd.temperature_fridge);
-				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_STATE;
 				break;
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_SET_STATE:
-				lcd_get_set_cb(LCD_SET_TEMPERATURE_FREEZER_EVT, &lcd.temperature_freezer);
-				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_SET_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_STATE;
+				break;
+			//Temperature back to previous
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_SET_STATE:
+				lcd_get_set_cb(LCD_SET_TEMPERATURE_FRIDGE_SETPOINT_EVT, &lcd.setpoint_fridge);
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE:
+				lcd_get_set_cb(LCD_SET_TEMPERATURE_FRIDGE_DEVIATION_EVT, &lcd.deviation_fridge);
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE;
+				break;
+
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_SET_STATE:
+				lcd_get_set_cb(LCD_SET_TEMPERATURE_FREEZER_SETPOINT_EVT, &lcd.setpoint_freezer);
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE:
+				lcd_get_set_cb(LCD_SET_TEMPERATURE_FREEZER_DEVIATION_EVT,&lcd.deviation_freezer);
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE;
 				break;
 			//Alarm temp
 			case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE:
@@ -316,6 +332,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event  = 1;
+			lock_button = 0; //Reset lock
 			switch(lcd_state)
 			{
 			//lcd turn off unit
@@ -471,25 +488,36 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_CONTINUE_STATE;
 				break;
 			//Temperature set
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE:
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE;
 				break;
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_SET_STATE:
-				lcd.temperature_fridge ++;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_SET_STATE:
+				lcd.setpoint_fridge ++;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE:
+				lcd.deviation_fridge ++;
 				break;
 
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE:
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE;
 				break;
-
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_SET_STATE:
-				lcd.temperature_freezer ++;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_SET_STATE:
+				lcd.setpoint_freezer ++;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE:
+				lcd.deviation_freezer ++;
 				break;
 			//Alarm temp deviation set
 			case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE:
@@ -543,12 +571,23 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.temp_offset ++;
 				break;
 			}
+		}else if(evt == BUTTON_HOLD_2_SEC)
+		{
+			if(lock_button == 1) //Check button down previous press
+			{
+				lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
+			}
+			lock_button = 1;
+		}else
+		{
+			lock_button = 0;
 		}
 		break;
 	case BTN_DOWN:
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event  = 1;
+			lock_button = 0;
 			switch(lcd_state)
 			{
 			//lcd turn off unit
@@ -701,25 +740,38 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_CONTINUE_STATE;
 				break;
 			//Temperature set
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE:
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE;
-				break;
-			case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_SET_STATE:
-				lcd.temperature_fridge --;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE;
 				break;
 
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE:
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_SET_STATE:
+				lcd.setpoint_fridge --;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE:
+				lcd.deviation_fridge --;
+				break;
+
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE:
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE:
 				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE;
+				lcd_state = LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE;
 				break;
 
-			case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_SET_STATE:
-				lcd.temperature_freezer --;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_SET_STATE:
+				lcd.setpoint_freezer --;
+				break;
+			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE:
+				lcd.deviation_freezer --;
 				break;
 			//Alarm temp deviation set
 			case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE:
@@ -776,6 +828,16 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.temp_offset --;
 				break;
 			}
+		}else if(evt == BUTTON_HOLD_2_SEC)
+		{
+			if(lock_button == 1) //Check button down previous press
+			{
+				//lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
+			}
+			//lock_button = 1;
+		}else
+		{
+			//lock_button = 0;
 		}
 	}
 	if(has_event)
@@ -946,24 +1008,39 @@ void lcd_interface_show(lcd_state_t state)
 		lcd_setting_download_data_complete();
 		break;
 
-	case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_STATE:
-		lcd_service_temperature_fridge(SERVICE_TEMPERATURE_FRIDGE_VALUE, lcd.temperature_fridge);
+	case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:
+		lcd_service_temperature_fridge(SERVICE_TEMPERATURE_FRIDGE_SETPOINT);
+		break;
+	case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_STATE:
+		lcd_service_temperature_fridge(SERVICE_TEMPERATURE_FRIDGE_DEVIATION);
 		break;
 	case LCD_SERVICE_TEMPERATURE_FRIDGE_BACK_STATE:
-		lcd_service_temperature_fridge(SERVICE_TEMPERATURE_FRIDGE_BACK, lcd.temperature_fridge);
-		break;
-	case LCD_SERVICE_TEMPERATURE_FRIDGE_VALUE_SET_STATE:
-		lcd_service_temperature_fridge_set(lcd.temperature_fridge);
+		lcd_service_temperature_fridge(SERVICE_TEMPERATURE_FRIDGE_BACK);
 		break;
 
-	case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_STATE:
-		lcd_service_temperature_freezer(SERVICE_TEMPERATURE_FRIDGE_VALUE, lcd.temperature_freezer);
+	case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_SET_STATE:
+		lcd_service_temperature_fridge_setpoint_set(lcd.setpoint_fridge);
+		break;
+	case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE:
+		lcd_service_temperature_fridge_deviation_set(lcd.deviation_fridge);
+		break;
+
+	case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE:
+		lcd_service_temperature_freezer(SERVICE_TEMPERATURE_FREEZER_SETPOINT);
+		break;
+	case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_STATE:
+		lcd_service_temperature_freezer(SERVICE_TEMPERATURE_FREEZER_DEVIATION);
 		break;
 	case LCD_SERVICE_TEMPERATURE_FREEZER_BACK_STATE:
-		lcd_service_temperature_freezer(SERVICE_TEMPERATURE_FRIDGE_BACK, lcd.temperature_freezer);
+		lcd_service_temperature_freezer(SERVICE_TEMPERATURE_FREEZER_BACK);
 		break;
-	case LCD_SERVICE_TEMPERATURE_FREEZER_VALUE_SET_STATE:
-		lcd_service_temperature_freezer_set(lcd.temperature_freezer);
+
+	case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_SET_STATE:
+		lcd_service_temperature_freezer_setpoint_set(lcd.setpoint_freezer);
+		break;
+
+	case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE:
+		lcd_service_temperature_freezer_deviation_set(lcd.deviation_freezer);
 		break;
 
 	case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE:

@@ -21,6 +21,7 @@
 #include "PID.h"
 #include "File_Handling.h"
 #include "ili9341.h"
+#include "button.h"
 
 #define MAIN_TASK_TICK_MS    100 //ms
 #define RTC_TASK_TICK_MS          1000
@@ -30,6 +31,8 @@
 #define buzzer_lid_warning()          buzzer_togle(50, 2000, 0);
 #define buzzer_over_temp_warning()    buzzer_togle(100, 1000, 0);
 #define buzzer_under_temp_warning()   buzzer_togle(100, 1000, 0);
+#define buzzer_lock()                 buzzer_togle(100, 100, 1)
+#define buzzer_unlock()               buzzer_togle(100, 100, 2)
 
 #define KP                1
 #define KD                0
@@ -43,8 +46,8 @@ double limit_min = 0;
 
 #define LID_CLOSE_DELAY_MINS                   1
 
-#define TEMPERATURE_SHOW_INTERVAL              30 //Second
-
+#define TEMPERATURE_SHOW_INTERVAL              15 //Second
+//#define CMPRSR_DELAY_ON_MINS                   1 //Minute
 
 typedef enum
 {
@@ -95,6 +98,7 @@ typedef struct
 	uint32_t lid;
 	uint32_t logging;
 	uint32_t temper;
+	uint32_t cmprsr;
 }interval_count_t;
 
 interval_count_t interval_count =
@@ -127,13 +131,15 @@ lcd_inter_t setting = {
 	.alarm_temperature_deviation = 5, // Celcius
 	.temperature = 31,//Celcius
 	.logging_interval = 5,//Mins
-	.temperature_fridge = 31,//Celcius
-	.temperature_freezer = 31,//Celcius
+	.setpoint_fridge = 31,//Celcius
+	.setpoint_freezer = 31,//Celcius
 	.temp_offset = 0, //Celcius
 	.datetime.year = 2023,
 	.datetime.month = 11,
 	.datetime.day = 3,
 	.alarm_mute_duration = 1,//Minute
+	.deviation_freezer = 3,
+	.deviation_fridge = 3,
 };
 extern lcd_inter_t lcd;
 extern lcd_state_t lcd_state;
@@ -164,19 +170,35 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 
 			break;
 
-		case LCD_SET_TEMPERATURE_FRIDGE_EVT:
-			if(setting.temperature_fridge != *((int8_t *)value))
+		case LCD_SET_TEMPERATURE_FRIDGE_SETPOINT_EVT:
+			if(setting.setpoint_fridge != *((int8_t *)value))
 			{
 				save_state = CHANGE_DATA_STATE;
-				setting.temperature_fridge = *((int8_t *)value);
+				setting.setpoint_fridge = *((int8_t *)value);
 			}
 			break;
 
-		case LCD_SET_TEMPERATURE_FREEZER_EVT:
-			if(setting.temperature_freezer != *((int8_t *)value))
+		case LCD_SET_TEMPERATURE_FREEZER_SETPOINT_EVT:
+			if(setting.setpoint_freezer != *((int8_t *)value))
 			{
 				 save_state = CHANGE_DATA_STATE;
-				setting.temperature_freezer = *((int8_t *)value);
+				setting.setpoint_freezer = *((int8_t *)value);
+			}
+			break;
+
+		case LCD_SET_TEMPERATURE_FRIDGE_DEVIATION_EVT:
+			if(setting.deviation_fridge != *((int8_t *)value))
+			{
+				save_state = CHANGE_DATA_STATE;
+				setting.deviation_fridge = *((int8_t *)value);
+			}
+			break;
+
+		case LCD_SET_TEMPERATURE_FREEZER_DEVIATION_EVT:
+			if(setting.deviation_freezer != *((int8_t *)value))
+			{
+				 save_state = CHANGE_DATA_STATE;
+				setting.deviation_freezer = *((int8_t *)value);
 			}
 			break;
 
@@ -271,6 +293,19 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 		case LCD_POWER_SHORT_PRESS_EVT:
 			alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
 			break;
+		case LCD_LOCK_UNLOCK_KEY_EVT:
+			//setting.lock ^= 1;
+			if(setting.lock)
+			{
+				//buzzer_lock();
+				//button_lock(&btn[BTN_ENTER]);
+
+			}else
+			{
+				//buzzer_unlock();
+				//button_unlock(&btn[BTN_ENTER]);
+			}
+			break;
 	}
 	if(save_state == NEED_SAVE_STATE)// setting param change?
 	{
@@ -355,9 +390,19 @@ void main_task(void)
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();
 	//Get power status
+	// for removing Bug14
+	/*
+	if(get_power_mode() == POWER_MODE_BAT && setting.pwr_mode != POWER_MODE_BAT) //check swich AC/DC to BAT
+	{
+		interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS); //Reset counter
+	}
+	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
+    */
+
 	setting.pwr_mode = get_power_mode();
 	//Get Lid state
 	setting.lid_state = get_lid_state();
+
 
 
 	//temperature delay interval implement
@@ -367,16 +412,25 @@ void main_task(void)
 	if(setting.op_mode == OPERATION_MODE_FRIDEGE)
 	{
 		htr_off(); //Heater on in freezer mode,off in refrigerator off
-		PID_set_point(setting.temperature_fridge); //PID set new point
-		limit_min = - KP*setting.temperature_fridge;//Calculate limit when reach min warning delta temperature(current - setpoint)
-		limit_max = KP*setting.temperature_fridge;//Calculate limit when reach max warning delta temperature (current - setpoint)
-//		PID_limit(limit_min,limit_max);
-		if(setting.temperature <= (setting.temperature_fridge - setting.alarm_temperature_deviation))    //Check under min temperature
+
+		//Deviation logic control compressor
+		if(is_rtd_started())
+		{
+			if(setting.temperature >= setting.setpoint_fridge) //Reach setpoint -> Need down temperature by turn on compressor
+			{
+				ctl.cmprsr = TURN_ON;
+			}else if(setting.temperature <= (setting.setpoint_fridge - setting.deviation_fridge)) //Reach deviation->off compressor
+			{
+				ctl.cmprsr = TURN_OFF;
+			}
+		}
+
+		if(setting.temperature < (setting.setpoint_fridge - setting.alarm_temperature_deviation))    //Check under min temperature
 		{
 			//Increase count for delay check later
 			alarm_count.under_min_temp += 1;
 
-		}else if(setting.temperature >= (setting.temperature_fridge + setting.alarm_temperature_deviation))//Check over max temperature
+		}else if(setting.temperature > (setting.setpoint_fridge + setting.alarm_temperature_deviation))//Check over max temperature
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
@@ -387,16 +441,24 @@ void main_task(void)
 		}
 	}else if(setting.op_mode == OPERATION_MODE_FREEZER)
 	{
-		htr_on(); //Heater on in freezer mode,off in refrigerator off
-		PID_set_point(setting.temperature_freezer); //PID set new point
-		limit_min = - KP*setting.temperature_freezer;//Calculate limit when reach min warning delta temperature(current - setpoint)
-		limit_max = KP*setting.temperature_fridge;//Calculate limit when reach max warning delta temperature (current - setpoint)
-//		PID_limit(limit_min,limit_max);
-		if(setting.temperature <= (setting.temperature_freezer - setting.alarm_temperature_deviation))   //Check under min temperature
+		htr_on(); //Heater on in freezer mode,off in refrigerator mode
+
+		//Deviation logic control compressor
+		if(is_rtd_started())
+		{
+			if(setting.temperature >= setting.setpoint_freezer) //Reach setpoint -> Need down temperature by turn on compressor
+			{
+				ctl.cmprsr = TURN_ON;
+			}else if(setting.temperature <= (setting.setpoint_freezer - setting.deviation_freezer)) //Reach deviation->off compressor
+			{
+				ctl.cmprsr = TURN_OFF;
+			}
+		}
+		if(setting.temperature < (setting.setpoint_freezer - setting.alarm_temperature_deviation))   //Check under min temperature
 		{
 			//Increase count for delay check later
 			alarm_count.under_min_temp += 1;
-		}else if (setting.temperature >= (setting.temperature_freezer + setting.alarm_temperature_deviation))   //Check over max temperature
+		}else if (setting.temperature > (setting.setpoint_freezer + setting.alarm_temperature_deviation))   //Check over max temperature
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
@@ -407,25 +469,6 @@ void main_task(void)
 		}
 	}
 
-
-
-
-	//PID compute process
-	if(is_rtd_started())
-	{
-		PID_compute(rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR) + setting.temp_offset);
-		pid_output = PID_getOutput();
-	}
-
-	if(pid_output < -2.2) //Reach max temperature->down temp
-	{
-		ctl.cmprsr = TURN_ON;
-		ctl.cmprsr_fan = TURN_ON;
-	}else if(pid_output > 0)
-	{
-		ctl.cmprsr = TURN_OFF;
-		ctl.cmprsr_fan = TURN_OFF;
-	}
 
 	//Chamber fan always on in AC and DC operation
 	if(setting.pwr_mode == POWER_MODE_AC || setting.pwr_mode == POWER_MODE_DC)
@@ -466,6 +509,11 @@ void main_task(void)
 
 	//Fan1 control tight to compressor
 	ctl.fan1 = ctl.cmprsr;
+
+	//Logic Delay when swich AC/DC to BAT
+	//if(interval_count.cmprsr) ctl.cmprsr = TURN_OFF; //If have delay need when AC/DC to BAT
+
+
 
 	if(ctl.cmprsr == TURN_ON) cmprsr_power_on();
 	else cmprsr_power_off();
@@ -575,17 +623,17 @@ void main_task(void)
 			if(setting.warning_type == WARNING_TYPE_LID_OPEN) //Warning lid higher priority
 			{
 				buzzer_lid_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_OVER_MAX_TEMP)
 			{
 				 buzzer_over_temp_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_UNDER_MIN_TEMP)
 			{
 				buzzer_under_temp_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}
 			break;
@@ -653,7 +701,7 @@ void main_task(void)
 	if(interval_count.logging >= MINUTE_TO_COUNT(setting.logging_interval))
 	{
 		interval_count.logging = 0;
-		//logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
+		logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
 	}
 }
 
@@ -667,10 +715,6 @@ void main_app_init(void)
 	flash_mgt_read((uint32_t *)&setting, sizeof(lcd_inter_t));
 	//Load all current param to lcd param
 	memcpy((uint8_t *)&lcd,(uint8_t *)&setting, sizeof(lcd_inter_t));
-    //PID set param
-    PID_init();
-	PID_tune(KP,KI,KD);
-	PID_set_divisor(1);
 	//LCD ui
 	lcd_ui_init(); //Init lvgl, porting
 	lcd_interface_init(); //Init api and show main frame
