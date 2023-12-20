@@ -28,7 +28,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 	switch(btn_num)
 	{
 	case BTN_ENTER:
-		//lock_button = 0;
+		lock_button = 0;
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event = 1;
@@ -832,12 +832,12 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 		{
 			if(lock_button == 1) //Check button down previous press
 			{
-				//lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
+				lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
 			}
-			//lock_button = 1;
+			lock_button = 1;
 		}else
 		{
-			//lock_button = 0;
+			lock_button = 0;
 		}
 	}
 	if(has_event)
@@ -1099,13 +1099,13 @@ void lcd_interface_show(lcd_state_t state)
 		lcd_service_calibration_set(lcd.temp_offset);
 		break;
 	case LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE:
-		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_UNDER_MIN_TEMP);
+		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_UNDER_MIN_TEMP, lcd.temperature);
 		break;
 	case LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE:
-		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_OVER_MAX_TEMP);
+		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_OVER_MAX_TEMP, lcd.temperature);
 		break;
 	case LCD_WARNING_TYPE_LID_OPEN_STATE:
-		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_LID_OPEN);
+		lcd_service_alarms_warning(lcd.op_mode, WARNING_TYPE_LID_OPEN, lcd.temperature);
 		break;
 	}
 	lcd_ui_refresh();

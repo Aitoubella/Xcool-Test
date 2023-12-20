@@ -84,7 +84,7 @@ void button_task(void)
 {
 	for(uint8_t btn_num = 0; btn_num < BTN_MAX; btn_num++)
 	{
-		//if(btn[btn_num].lock) continue; //Skip btn lock for not read logic purpose
+		if(btn[btn_num].lock) continue; //Skip btn lock for not read logic purpose
 		uint32_t logic = button_debounce(&btn[btn_num].debounce, button_read_pin(btn_num));
 		if(btn[btn_num].logic_active == logic)
 		{

@@ -31,11 +31,13 @@ static uint8_t led_initialize = 0;
 
 void led_on(led_t *x)
 {
-	led_start_togle(x, 10000, 0, 100);
+	x->state = LEDS_STOP_WATING_STATE;
+	LED_ON(x->gpio,x->pin);
 }
 void led_off(led_t *x)
 {
-	led_start_togle(x, 0, 10000, 100);
+	x->state = LEDS_STOP_WATING_STATE;
+	LED_OFF(x->gpio,x->pin);
 }
 
 
@@ -102,6 +104,7 @@ void led_task(void)
 			break;
 
 		case LEDS_STOP_WATING_STATE:
+
 			break;
 		}
 	}

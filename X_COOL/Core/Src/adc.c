@@ -139,11 +139,28 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
   if(adcHandle->Instance==ADC1)
   {
   /* USER CODE BEGIN ADC1_MspInit 0 */
 
   /* USER CODE END ADC1_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+    PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI2;
+    PeriphClkInit.PLLSAI2.PLLSAI2Source = RCC_PLLSOURCE_HSE;
+    PeriphClkInit.PLLSAI2.PLLSAI2M = 1;
+    PeriphClkInit.PLLSAI2.PLLSAI2N = 8;
+    PeriphClkInit.PLLSAI2.PLLSAI2P = RCC_PLLP_DIV7;
+    PeriphClkInit.PLLSAI2.PLLSAI2R = RCC_PLLR_DIV2;
+    PeriphClkInit.PLLSAI2.PLLSAI2ClockOut = RCC_PLLSAI2_ADC2CLK;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
     /* ADC1 clock enable */
     __HAL_RCC_ADC_CLK_ENABLE();
 

@@ -113,8 +113,8 @@ void lv_port_disp_init(void)
     /*Set a display buffer*/
     disp_drv.draw_buf = &draw_buf_dsc_1;
 
-    disp_drv.sw_rotate = 1;
-    disp_drv.rotated = LV_DISP_ROT_180;
+    //disp_drv.sw_rotate = 1;
+    //disp_drv.rotated = LV_DISP_ROT_180;
     /*Required for Example 3)*/
     //disp_drv.full_refresh = 1;
 

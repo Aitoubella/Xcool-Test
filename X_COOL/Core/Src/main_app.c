@@ -28,7 +28,7 @@
 #define BAT_OUT_OF_VALUE     7 //in perent
 #define MINUTE_TO_COUNT(x) (x*60*1000/MAIN_TASK_TICK_MS) //convert minute to tick count in main task
 #define SECOND_TO_COUNT(x) (x*1000/MAIN_TASK_TICK_MS)
-#define buzzer_lid_warning()          buzzer_togle(50, 2000, 0);
+#define buzzer_lid_warning()          buzzer_togle(50, 1500, 0);
 #define buzzer_over_temp_warning()    buzzer_togle(100, 1000, 0);
 #define buzzer_under_temp_warning()   buzzer_togle(100, 1000, 0);
 #define buzzer_lock()                 buzzer_togle(100, 100, 1)
@@ -46,8 +46,8 @@ double limit_min = 0;
 
 #define LID_CLOSE_DELAY_MINS                   1
 
-#define TEMPERATURE_SHOW_INTERVAL              15 //Second
-//#define CMPRSR_DELAY_ON_MINS                   1 //Minute
+#define TEMPERATURE_SHOW_INTERVAL              5 //Second
+#define CMPRSR_DELAY_ON_MINS                   1 //Minute
 
 typedef enum
 {
@@ -113,6 +113,7 @@ buzzer_state_t buzzer_state  = BUZZER_OFF_STATE;
 save_state_t save_state = NONE_SAVE_STATE;
 double pid_output;
 static event_id main_app_id;
+static event_id led_id;
 static event_id rtc_time_id;
 extern char USERPath[4];
 extern char USBHPath[4];
@@ -291,21 +292,25 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 			pwr_ctrl_on();
 			break;
 		case LCD_POWER_SHORT_PRESS_EVT:
-			alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
+			if(main_state == MAIN_WARNING_WAITING_STATE)
+			{
+				//alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
+			}
 			break;
-		case LCD_LOCK_UNLOCK_KEY_EVT:
-			//setting.lock ^= 1;
+		/*case LCD_LOCK_UNLOCK_KEY_EVT:
+			setting.lock ^= 1;
 			if(setting.lock)
 			{
-				//buzzer_lock();
-				//button_lock(&btn[BTN_ENTER]);
+				buzzer_lock();
+				button_lock(&btn[BTN_ENTER]);
 
 			}else
 			{
-				//buzzer_unlock();
-				//button_unlock(&btn[BTN_ENTER]);
+				buzzer_unlock();
+				button_unlock(&btn[BTN_ENTER]);
 			}
 			break;
+		*/
 	}
 	if(save_state == NEED_SAVE_STATE)// setting param change?
 	{
@@ -390,14 +395,11 @@ void main_task(void)
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();
 	//Get power status
-	// for removing Bug14
-	/*
 	if(get_power_mode() == POWER_MODE_BAT && setting.pwr_mode != POWER_MODE_BAT) //check swich AC/DC to BAT
 	{
 		interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS); //Reset counter
 	}
 	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
-    */
 
 	setting.pwr_mode = get_power_mode();
 	//Get Lid state
@@ -414,29 +416,33 @@ void main_task(void)
 		htr_off(); //Heater on in freezer mode,off in refrigerator off
 
 		//Deviation logic control compressor
+
+		/*
 		if(is_rtd_started())
 		{
-			if(setting.temperature >= setting.setpoint_fridge) //Reach setpoint -> Need down temperature by turn on compressor
-			{
-				ctl.cmprsr = TURN_ON;
-			}else if(setting.temperature <= (setting.setpoint_fridge - setting.deviation_fridge)) //Reach deviation->off compressor
+			if(setting.temperature <= setting.setpoint_fridge) //Reach setpoint -> Off compressor
 			{
 				ctl.cmprsr = TURN_OFF;
+			}else if(setting.temperature >= (setting.setpoint_fridge + setting.deviation_fridge)) //Reach deviation->Need down temperature
+			{
+				ctl.cmprsr = TURN_ON;
 			}
 		}
-
+        */
 		if(setting.temperature < (setting.setpoint_fridge - setting.alarm_temperature_deviation))    //Check under min temperature
 		{
 			//Increase count for delay check later
 			alarm_count.under_min_temp += 1;
+			//alarm_count.over_max_temp = 0;
 
 		}else if(setting.temperature > (setting.setpoint_fridge + setting.alarm_temperature_deviation))//Check over max temperature
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
+			//alarm_count.under_min_temp = 0;
 		}else
 		{
-			alarm_count.over_max_temp = 0;
+			//alarm_count.over_max_temp = 0;
 			alarm_count.under_min_temp = 0;
 		}
 	}else if(setting.op_mode == OPERATION_MODE_FREEZER)
@@ -446,22 +452,24 @@ void main_task(void)
 		//Deviation logic control compressor
 		if(is_rtd_started())
 		{
-			if(setting.temperature >= setting.setpoint_freezer) //Reach setpoint -> Need down temperature by turn on compressor
-			{
-				ctl.cmprsr = TURN_ON;
-			}else if(setting.temperature <= (setting.setpoint_freezer - setting.deviation_freezer)) //Reach deviation->off compressor
+			if(setting.temperature <= setting.setpoint_freezer) //Reach setpoint -> Off compressor
 			{
 				ctl.cmprsr = TURN_OFF;
+			}else if(setting.temperature >= (setting.setpoint_freezer + setting.deviation_freezer)) //Reach deviation->on compressor
+			{
+				ctl.cmprsr = TURN_ON;
 			}
 		}
 		if(setting.temperature < (setting.setpoint_freezer - setting.alarm_temperature_deviation))   //Check under min temperature
 		{
 			//Increase count for delay check later
 			alarm_count.under_min_temp += 1;
+			alarm_count.over_max_temp = 0;
 		}else if (setting.temperature > (setting.setpoint_freezer + setting.alarm_temperature_deviation))   //Check over max temperature
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
+			//alarm_count.under_min_temp = 0;
 		}else
 		{
 			alarm_count.over_max_temp = 0;
@@ -611,6 +619,17 @@ void main_task(void)
 			{
 				lcd_state = LCD_MAIN_STATE;
 				lcd_interface_show(lcd_state);
+			}else //Still warning.
+			{
+				if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
+				{
+					if(lcd_param->temperature != setting.temperature)
+					{
+						//lcd_param->temperature = setting.temperature;
+						//interval_count.temper = 0;
+						//lcd_interface_show(lcd_state); //Reload when temperature change
+					}
+				}
 			}
 			break;
 		default:
@@ -623,17 +642,17 @@ void main_task(void)
 			if(setting.warning_type == WARNING_TYPE_LID_OPEN) //Warning lid higher priority
 			{
 				buzzer_lid_warning();
-				logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
+				//logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_OVER_MAX_TEMP)
 			{
 				 buzzer_over_temp_warning();
-				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_UNDER_MIN_TEMP)
 			{
 				buzzer_under_temp_warning();
-				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}
 			break;
@@ -701,9 +720,10 @@ void main_task(void)
 	if(interval_count.logging >= MINUTE_TO_COUNT(setting.logging_interval))
 	{
 		interval_count.logging = 0;
-		logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
+		//logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
 	}
 }
+
 
 void main_app_init(void)
 {
@@ -718,6 +738,8 @@ void main_app_init(void)
 	//LCD ui
 	lcd_ui_init(); //Init lvgl, porting
 	lcd_interface_init(); //Init api and show main frame
+	event_add(led_task, &led_id, 10);
+	event_active(&led_id);
 	event_add(main_task, &main_app_id, MAIN_TASK_TICK_MS);
 	event_active(&main_app_id);
 	rtc_task(); //Update time when start;

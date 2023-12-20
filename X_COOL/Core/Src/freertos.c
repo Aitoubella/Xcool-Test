@@ -53,7 +53,6 @@ osThreadId eventTaskHandle;
 osThreadId ledTaskHandle;
 /* USER CODE END Variables */
 osThreadId usbHostTaskHandle;
-osThreadId ledTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -61,7 +60,6 @@ extern void MX_USB_HOST_Process(void);
 /* USER CODE END FunctionPrototypes */
 
 void UsbRunTask(void const * argument);
-void LedRunTask(void const * argument);
 
 extern void MX_USB_HOST_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -110,12 +108,8 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of usbHostTask */
-  osThreadDef(usbHostTask, UsbRunTask, osPriorityNormal, 0, 1500);
+  osThreadDef(usbHostTask, UsbRunTask, osPriorityNormal, 0, 4096);
   usbHostTaskHandle = osThreadCreate(osThread(usbHostTask), NULL);
-
-  /* definition and creation of ledTask */
-  osThreadDef(ledTask, LedRunTask, osPriorityLow, 0, 128);
-  ledTaskHandle = osThreadCreate(osThread(ledTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
@@ -146,25 +140,6 @@ void UsbRunTask(void const * argument)
 	  osDelay(1);
   }
   /* USER CODE END UsbRunTask */
-}
-
-/* USER CODE BEGIN Header_LedRunTask */
-/**
-* @brief Function implementing the ledTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_LedRunTask */
-void LedRunTask(void const * argument)
-{
-  /* USER CODE BEGIN LedRunTask */
-  /* Infinite loop */
-  for(;;)
-  {
-	  led_task_interrupt(1);
-	  osDelay(10);
-  }
-  /* USER CODE END LedRunTask */
 }
 
 /* Private application code --------------------------------------------------*/

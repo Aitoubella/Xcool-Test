@@ -244,7 +244,7 @@ void lcd_service_alarm_lid(service_alarms_lid_t index, uint8_t value);
 void lcd_service_alarm_lid_set(uint8_t value);
 void lcd_service_alarms_mute_duration(service_alarms_mute_duration_t index, uint8_t value);
 void lcd_service_alarms_mute_duration_set(uint8_t value);
-void lcd_service_alarms_warning(operation_mode_t mode, warning_type_t type);
+void lcd_service_alarms_warning(operation_mode_t mode, warning_type_t type, int16_t temperature);
 
 
 #endif /* SRC_LCD_UI_H_ */

@@ -963,19 +963,22 @@ void lcd_service_alarms_mute_duration_set(uint8_t value)
 }
 
 
-void lcd_service_alarms_warning(operation_mode_t mode, warning_type_t type)
+void lcd_service_alarms_warning(operation_mode_t mode, warning_type_t type, int16_t temperature)
 {
-
+	lcd_ui_t temper = FONT_VERDENA_24;
 	lcd_ui_t mode_obj = FONT_VERDENA_40;
 	lcd_ui_t type_obj = FONT_VERDENA_36;
 	lcd_ui_t warning_symbol = FONT_VERDENA_40;
 	lcd_set_background_color(screen,RED_COLOR);
+
+	snprintf(temp_buff,MAX_TEMP_CHAR, "%d°C",temperature);
+	lcd_label_set_param(temper.obj, temp_buff, 103, -89, temper.font, WHITE_COLOR);
 	if(mode == OPERATION_MODE_FRIDEGE)
 	{
-		lcd_label_set_param(mode_obj.obj, "Fridge", 0, -70, mode_obj.font, WHITE_COLOR);
+		lcd_label_set_param(mode_obj.obj, "Fridge", 0, -50, mode_obj.font, WHITE_COLOR);
 	}else
 	{
-		lcd_label_set_param(mode_obj.obj, "Freezer", 0, -70, mode_obj.font, WHITE_COLOR);
+		lcd_label_set_param(mode_obj.obj, "Freezer", 0, -50, mode_obj.font, WHITE_COLOR);
 	}
 
 	if(type == WARNING_TYPE_UNDER_MIN_TEMP)
