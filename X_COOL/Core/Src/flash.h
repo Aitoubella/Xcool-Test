@@ -9,7 +9,7 @@
 #define SRC_FLASH_H_
 #include <stdint.h>
 #include "flash_page.h"
-#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_250   /* Start @ of user Flash area */
+#define FLASH_USER_START_ADDR   ADDR_FLASH_PAGE_510   /* Start @ of user Flash area */
 #define USER_FLASH_SIZE         0x800               /*1 page*/
 
 

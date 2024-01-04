@@ -126,7 +126,7 @@ int main(void)
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
   printf("\nApplication started!");
-  pwr_ctrl_on(); //On power 5V
+  pwr_5v_on(); //On power 5V
   logging_init();
   event_init();
   //RTD temperature sensor

@@ -15,6 +15,7 @@ event_id button_id;
 #define TICK_1000_MS                     (1000)
 #define TICK_2000_MS                     (2000)
 #define TICK_3000_MS                     (3000)
+#define TICK_5000_MS                     (5000)
 #define TICK_10000_MS                    (10000)
 #define TICK_PUSH_MS                     (50)
 
@@ -37,7 +38,9 @@ enum
 	BUTTON_HOLDING_2S_STATE,
 	BUTTON_HOLD_3S_STATE, //7
 	BUTTON_HOLDING_3S_STATE,
-	BUTTON_HOLD_10S_STATE, //7
+	BUTTON_HOLD_5S_STATE, //9
+	BUTTON_HOLDING_5S_STATE,
+	BUTTON_HOLD_10S_STATE, //11
 	BUTTON_HOLDING_10S_STATE,
 };
 
@@ -73,12 +76,12 @@ void btn_evt_cb_default(uint8_t btn_num, btn_evt_t evt)
 
 void button_lock(button_t* btn)
 {
-	//btn->lock = 1;
+	btn->lock = 1;
 }
 
 void button_unlock(button_t* btn)
 {
-	//btn->lock = 0;
+	btn->lock = 0;
 }
 void button_task(void)
 {
@@ -118,10 +121,10 @@ void button_task(void)
 			if(btn[btn_num].push_count > 10 && btn[btn_num].push_count < 500)
 			{
 				btn_evt_cb(btn_num, BUTTON_SHORT_PRESS);
-			}else
-			{
-				if(btn[btn_num].push_count > TICK_PUSH_MS) btn_evt_cb(btn_num, BUTTON_RELEASE);
 			}
+
+			if(btn[btn_num].push_count > TICK_PUSH_MS) btn_evt_cb(btn_num, BUTTON_RELEASE);
+
 			btn[btn_num].push_count = 0; //Reset push_count
 			btn[btn_num].state = BUTTON_START_STATE;
 			break;
@@ -149,7 +152,19 @@ void button_task(void)
 			btn_evt_cb(btn_num, BUTTON_HOLD_3_SEC);
 			btn[btn_num].state = BUTTON_HOLDING_3S_STATE;
 			break;
+
 		case BUTTON_HOLDING_3S_STATE:
+			if(btn[btn_num].push_count > TICK_5000_MS)
+			{
+				btn[btn_num].state = BUTTON_HOLD_5S_STATE;
+			}
+			break;
+		case BUTTON_HOLD_5S_STATE:
+			btn_evt_cb(btn_num, BUTTON_HOLD_5_SEC);
+			btn[btn_num].state = BUTTON_HOLDING_5S_STATE;
+			break;
+
+		case BUTTON_HOLDING_5S_STATE:
 			if(btn[btn_num].push_count > TICK_10000_MS)
 			{
 				btn[btn_num].state = BUTTON_HOLD_10S_STATE;

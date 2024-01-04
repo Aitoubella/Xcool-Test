@@ -471,14 +471,24 @@ void lcd_setting_download_data_insert(setting_download_data_insert_t index)
 	lcd_label_set_param(cancel.obj, "Cancel", 0, 63, cancel.font, WHITE_COLOR);
 }
 
-void lcd_setting_download_data_complete(void)
+void lcd_setting_download_data_complete(setting_download_data_result result)
 {
+	lcd_ui_t download = FONT_VERDENA_36;
 	lcd_ui_t complete = FONT_VERDENA_36;
 	lcd_ui_t safe_remove = FONT_VERDENA_36;
+	lcd_ui_t usb_device = FONT_VERDENA_36;
 	lcd_ui_t continue_label = FONT_VERDENA_24;
+	lcd_label_set_param(download.obj, "Download", 0, -96, download.font, WHITE_COLOR);
+	if(result == SETTING_DOWNLOAD_DATA_SUCCESS)
+	{
+		lcd_label_set_param(complete.obj, "complete", 0, -60, complete.font, WHITE_COLOR);
+	}else
+	{
+		lcd_label_set_param(complete.obj, "failed", 0, -60, complete.font, WHITE_COLOR);
+	}
 
-	lcd_label_set_param(complete.obj, "Download\ncomplete", 0, -70, complete.font, WHITE_COLOR);
-	lcd_label_set_param(safe_remove.obj, "Safe to remove\nUSB Device", 0, 22, safe_remove.font, WHITE_COLOR);
+	lcd_label_set_param(safe_remove.obj, "Safe to remove", 0, 0, safe_remove.font, WHITE_COLOR);
+	lcd_label_set_param(usb_device.obj, "USB Device", 0, 36, usb_device.font, WHITE_COLOR);
 	lcd_label_set_param(continue_label.obj, "Continue", 0, 81, continue_label.font, WHITE_COLOR);
 }
 

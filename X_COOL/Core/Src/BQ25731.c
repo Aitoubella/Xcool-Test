@@ -8,6 +8,7 @@
 
 #include "BQ25731.h"
 #include "i2c.h"
+#include "app_i2c.h"
 #include "main.h"
 #include <string.h>
 #define BQ25731_I2C     hi2c1
@@ -22,7 +23,7 @@
 HAL_StatusTypeDef bq25731_read_reg(uint8_t reg, uint8_t *data, uint16_t len)
 {
 	HAL_StatusTypeDef status = HAL_OK;
-	status = HAL_I2C_Master_Transmit(&BQ25731_I2C, (BQ25731_ADDR << 1) | 0x01, &reg, 1, 100); //Send write operation to move to reg
+	status = I2C_Master_Transmit(&BQ25731_I2C, (BQ25731_ADDR << 1) | 0x01, &reg, 1, 100); //Send write operation to move to reg
 	if(status != HAL_OK) return status;
 	return HAL_I2C_Master_Receive(&BQ25731_I2C, (BQ25731_ADDR << 1), data, len, 100); //Read 1 data from current reg
 }
@@ -32,7 +33,7 @@ HAL_StatusTypeDef bq25731_write_reg(uint8_t reg, uint8_t *data, uint16_t len)
 	if(len >= 5) return HAL_ERROR;
 	uint8_t data_temp[MAX_LEN_WRITE] = {reg};
 	memcpy(&data_temp[1], data, len);
-	return HAL_I2C_Master_Transmit(&BQ25731_I2C, (BQ25731_ADDR << 1), data_temp, len + 1, 100);
+	return I2C_Master_Transmit(&BQ25731_I2C, (BQ25731_ADDR << 1), data_temp, len + 1, 100);
 }
 
 HAL_StatusTypeDef bq25731_set_bit_reg(uint8_t reg, uint8_t lsb, uint8_t msb)

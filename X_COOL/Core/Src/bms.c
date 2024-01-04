@@ -62,6 +62,8 @@ typedef enum
 	BMS_DISCHARGE_STATE,
 	BMS_DISCHARGE_WAITING_STATE,
 	BMS_BAT_SHUTDOWN_STATE,
+	BMS_BAT_TURN_OFF_CHARGE_STATE,
+	BMS_BAT_TURN_OFF_CHARGE_WATING_STATE
 }bms_state_t;
 
 bms_state_t bms_state = BMS_START_STATE;
@@ -147,7 +149,7 @@ uint32_t bms_voltage_to_percent(uint32_t vol)
 
 void bms_task(void)
 {
-	bq25731_get_charge_status(&bq25731);
+//	bq25731_get_charge_status(&bq25731);
 	bq25731_get_charge_discharge_current(&bq25731, &charge.charge_current,&charge.discharge_current);
 	bq25731_get_sys_and_bat_voltage(&bq25731, &charge.bat_voltage, &charge.sys_voltage);
 	bq25731_get_vbus_psys(&bq25731,&charge.bus_voltage, &charge.power_sys);
@@ -251,14 +253,21 @@ void bms_task(void)
 				}
 			}
 			break;
+		case BMS_BAT_TURN_OFF_CHARGE_STATE:
+			bq25731_set_charge_current(0);
+			charge.is_charge = 0;
+			charge.is_charging = 0;
+			bms_state = BMS_BAT_TURN_OFF_CHARGE_WATING_STATE;
+			break;
+		case BMS_BAT_TURN_OFF_CHARGE_WATING_STATE:
+
+			break;
 	}
 	if(charge.is_charge == 0)
 	{
 		charge.bat_percent = bms_voltage_to_percent(charge.bat_voltage);
 		bms_charge_update_cap();
 	}
-
-
 }
 
 HAL_StatusTypeDef bms_init(void)
@@ -316,4 +325,14 @@ charge_info_t* bms_get_charge_info(void)
 	return &charge;
 }
 
+
+void bms_off_charge(void)
+{
+	bms_state = BMS_BAT_TURN_OFF_CHARGE_STATE;
+}
+
+void bms_on_charge(void)
+{
+	bms_state = BMS_START_STATE;
+}
 

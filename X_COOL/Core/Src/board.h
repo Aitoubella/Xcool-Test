@@ -51,6 +51,6 @@ typedef enum
 charge_status_t get_charge_status(void);
 
 
-void pwr_ctrl_on(void);
-void pwr_ctrl_off(void);
+void pwr_5v_on(void);
+void pwr_5v_off(void);
 #endif /* SRC_BOARD_H_ */

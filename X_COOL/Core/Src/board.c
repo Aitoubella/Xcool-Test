@@ -56,12 +56,12 @@ cmprsr_status_t get_cmprsr_status(void)
 /*
  * @brief On 5V for controller board
  * */
-void pwr_ctrl_on(void)
+void pwr_5v_on(void)
 {
 	HAL_GPIO_WritePin(PWR_CTL_GPIO_Port, PWR_CTL_Pin, GPIO_PIN_RESET);
 }
 
-void pwr_ctrl_off(void)
+void pwr_5v_off(void)
 {
 	HAL_GPIO_WritePin(PWR_CTL_GPIO_Port, PWR_CTL_Pin, GPIO_PIN_SET);
 }

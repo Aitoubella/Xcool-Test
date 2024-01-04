@@ -174,7 +174,11 @@ typedef enum
 	SERVICE_ALARM_MUTE_DURATION_BACK
 }service_alarms_mute_duration_t;
 
-
+typedef enum
+{
+	SETTING_DOWNLOAD_DATA_SUCCESS = 0,
+	SETTING_DOWNLOAD_DATA_FAILED,
+}setting_download_data_result;
 
 typedef enum
 {
@@ -221,7 +225,7 @@ void lcd_setting_datetime_hour_set(uint8_t hour);
 void lcd_setting_datetime_min_set(uint8_t min);
 void lcd_setting_download_data(setting_download_data_t index);
 void lcd_setting_download_data_insert(setting_download_data_insert_t index);
-void lcd_setting_download_data_complete(void);
+void lcd_setting_download_data_complete(setting_download_data_result result);
 void lcd_service(service_t index);
 void lcd_service_temperature(service_temperature_t index);
 void lcd_service_alarms(service_alarm_t index);

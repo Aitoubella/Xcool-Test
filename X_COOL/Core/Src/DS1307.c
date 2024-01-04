@@ -9,6 +9,7 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
+#include "app_i2c.h"
 
 I2C_HandleTypeDef *_ds1307_ui2c;
 
@@ -47,7 +48,7 @@ uint8_t DS1307_GetClockHalt(void) {
 uint8_t DS1307_SetRegByte(uint8_t regAddr, uint8_t val)
 {
 	uint8_t bytes[2] = { regAddr, val };
-	return (HAL_I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, bytes, 2, DS1307_TIMEOUT));
+	return (I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, bytes, 2, DS1307_TIMEOUT));
 }
 
 /**
@@ -57,8 +58,8 @@ uint8_t DS1307_SetRegByte(uint8_t regAddr, uint8_t val)
  */
 uint8_t DS1307_GetRegByte(uint8_t regAddr) {
 	uint8_t val;
-	HAL_I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &regAddr, 1, DS1307_TIMEOUT);
-	HAL_I2C_Master_Receive(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &val, 1, DS1307_TIMEOUT);
+	if(I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &regAddr, 1, DS1307_TIMEOUT) != HAL_OK) return 0;
+	I2C_Master_Receive(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &val, 1, DS1307_TIMEOUT);
 	return val;
 }
 
@@ -260,14 +261,15 @@ HAL_StatusTypeDef DS1307_GetDate(uint8_t* day, uint8_t* month, uint16_t* year)
 	uint8_t reg = DS1307_REG_DATE;
 	uint8_t cen;
 	//Get 3 byte day,month,year continuously
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1),&reg , 1, DS1307_TIMEOUT);
-	status = HAL_I2C_Master_Receive(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp, sizeof(temp), DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1),&reg , 1, DS1307_TIMEOUT);
+	if(status != HAL_OK) return status;
+	status = I2C_Master_Receive(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp, sizeof(temp), DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 	//Get byte century
 	reg = DS1307_REG_CENT;
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), &reg, 1, DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), &reg, 1, DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
-	status = HAL_I2C_Master_Receive(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), &cen, 1, DS1307_TIMEOUT);
+	status = I2C_Master_Receive(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), &cen, 1, DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 
 	//Convert
@@ -291,12 +293,12 @@ HAL_StatusTypeDef DS1307_SetDate(uint8_t day, uint8_t month, uint16_t year)
 	uint8_t temp[] = {DS1307_REG_DATE, DS1307_EncodeBCD(day), DS1307_EncodeBCD(month), DS1307_EncodeBCD(year % 100)};
 
 	//Get 3 byte day,month,year continuously
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp , sizeof(temp), DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp , sizeof(temp), DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 	//Get byte century
 	temp[0] = DS1307_REG_CENT;
 	temp[1] = year/100;
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp, 2, DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp, 2, DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 
 	//Convert
@@ -317,10 +319,10 @@ HAL_StatusTypeDef DS1307_GetTime(uint8_t* hour, uint8_t* min, uint8_t* second)
 	uint8_t temp[3];
 	uint8_t reg = DS1307_REG_SECOND;
 	//Get 3 byte day,month,year continuously
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &reg, 1, DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, &reg, 1, DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 
-	status = HAL_I2C_Master_Receive(_ds1307_ui2c, DS1307_I2C_ADDR << 1, temp, sizeof(temp), DS1307_TIMEOUT);
+	status = I2C_Master_Receive(_ds1307_ui2c, DS1307_I2C_ADDR << 1, temp, sizeof(temp), DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 
 	//Convert
@@ -343,7 +345,7 @@ HAL_StatusTypeDef DS1307_SetTime(uint8_t hour, uint8_t min, uint8_t second)
 
 	uint8_t temp[] = {DS1307_REG_SECOND, DS1307_EncodeBCD(second), DS1307_EncodeBCD(min), DS1307_EncodeBCD(hour)};
 	//Get 3 byte day,month,year continuously
-	status = HAL_I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, temp, sizeof(temp), DS1307_TIMEOUT);
+	status = I2C_Master_Transmit(_ds1307_ui2c, DS1307_I2C_ADDR << 1, temp, sizeof(temp), DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
 	return HAL_OK;
 }

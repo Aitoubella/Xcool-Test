@@ -9,8 +9,11 @@
 #include "PI4IOE.h"
 #include "i2c.h"
 #include "main.h"
-//#define PI4IOE_I2C_ADDR   0x21 //ADDR PIN logic 1
-#define PI4IOE_I2C_ADDR     0x20 //ADDR PIN logic 0
+
+#include "app_i2c.h"
+
+#define PI4IOE_I2C_ADDR   0x21 //ADDR PIN logic 1
+//#define PI4IOE_I2C_ADDR     0x20 //ADDR PIN logic 0
 
 #define PI4IOE_I2C        hi2c1
 
@@ -60,13 +63,13 @@ PI4IO_GPIO_Typedef_t PI4IO_GPIO1 = PI4IO_PORT_1;
 HAL_StatusTypeDef PI4IOE_Write_Reg(uint8_t reg, uint8_t data)
 {
 	uint8_t data_temp[2] = {reg,data};
-	return HAL_I2C_Master_Transmit(&PI4IOE_I2C, (PI4IOE_I2C_ADDR << 1),data_temp, 2, 100);
+	return I2C_Master_Transmit(&PI4IOE_I2C, (PI4IOE_I2C_ADDR << 1),data_temp, 2, 100);
 }
 
 HAL_StatusTypeDef PI4IOE_Read_Reg(uint8_t reg, uint8_t* data)
 {
 	HAL_StatusTypeDef status = HAL_OK;
-	status = HAL_I2C_Master_Transmit(&PI4IOE_I2C, (PI4IOE_I2C_ADDR << 1) | 0x01, &reg, 1, 100); //Send write operation to move to reg
+	status = I2C_Master_Transmit(&PI4IOE_I2C, (PI4IOE_I2C_ADDR << 1) | 0x01, &reg, 1, 100); //Send write operation to move to reg
 	if(status != HAL_OK) return status;
 
 	return HAL_I2C_Master_Receive(&PI4IOE_I2C, (PI4IOE_I2C_ADDR << 1), data, 1, 100); //Read 1 data from current reg

@@ -79,9 +79,9 @@ FRESULT logging_write(char* file, lcd_inter_t* dat)
 
 
 	//Copy in a string
-	len = sprintf((char*)usb_buffer, "%d/%d/%d %d:%d:%d,%s,%d,%d,%d,%d,%s,%s,%s,%s,%s\r\n",
-			                        dat->datetime.year, dat->datetime.month, dat->datetime.day, dat->datetime.hour, dat->datetime.minute, dat->datetime.second,op_mode_str[dat->op_mode],setpoint_set, deviation_set,
-									dat->temperature, dat->bat_value, bat_state_str[dat->bat_state], power_mode_str[dat->pwr_mode], lid_state_str[dat->lid_state], warning_type_str[dat->warning_type],speaker_mode_str[dat->spk_mode]);
+	len = sprintf((char*)usb_buffer, "%d/%d/%d %d:%d:%d,%s,%d,%d,%d,%d,%d,%s,%s,%s,%s,%s\r\n",
+			                        dat->datetime.year, dat->datetime.month, dat->datetime.day, dat->datetime.hour, dat->datetime.minute, dat->datetime.second, op_mode_str[dat->op_mode],setpoint_set, deviation_set,dat->temperature,
+									dat->second_temperature,dat->bat_value, bat_state_str[dat->bat_state], power_mode_str[dat->pwr_mode], lid_state_str[dat->lid_state], warning_type_str[dat->warning_type], speaker_mode_str[dat->spk_mode]);
 	UINT bytesWrote;
 	fres = f_write(&USERFile, usb_buffer, len, &bytesWrote);
 	if(fres == FR_OK)

@@ -16,8 +16,10 @@ typedef struct
 	speaker_mode_t spk_mode;
 	battery_state_t bat_state;
 	battery_signal_t bat_signal;
+	display_unit_t onoff;
 	datetime_t datetime;
 	int16_t temperature;
+	int16_t second_temperature;
 	uint8_t bat_value;
 	int8_t setpoint_fridge;
 	int8_t setpoint_freezer;
@@ -32,7 +34,7 @@ typedef struct
 	uint8_t alarm_mute_duration;
 	lid_state_t lid_state;
 	warning_type_t warning_type;
-	uint8_t lock;
+	setting_download_data_result download_result;
 }lcd_inter_t;
 
 typedef enum
@@ -40,8 +42,8 @@ typedef enum
 	//level 1
 	LCD_MAIN_STATE = 0,
 	LCD_OPERATION_MODE_STATE,
-	LCD_SETTING_STATE,
-	LCD_SERVICE_STATE,
+//	LCD_SETTING_STATE,
+//	LCD_SERVICE_STATE,
 	//level 2
 	LCD_OPERATION_MODE_FRIDEGE_STATE,
 	LCD_OPERATION_MODE_FREEZER_STATE,
@@ -171,11 +173,10 @@ typedef enum
 	LCD_MAIN_FRAME_EVT,
 
 	LCD_POWER_OFF_EVT,
-	LCD_PWER_ON_EVT,
+	LCD_POWER_ON_EVT,
 
 	LCD_POWER_SHORT_PRESS_EVT,
 
-	LCD_LOCK_UNLOCK_KEY_EVT,
 }lcd_get_set_evt_t;
 
 void lcd_interface_init(void);

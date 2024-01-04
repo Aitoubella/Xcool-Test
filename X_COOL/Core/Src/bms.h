@@ -36,4 +36,6 @@ typedef struct
 HAL_StatusTypeDef bms_init(void);
 charge_info_t* bms_get_charge_info(void);
 uint32_t bms_voltage_to_percent(uint32_t vol);
+void bms_off_charge(void);
+void bms_on_charge(void);
 #endif /* SRC_BMS_H_ */

@@ -20,15 +20,15 @@ lcd_inter_t lcd =
 {
 	.bat_state = BATTERY_STATE_NOT_CHARGE,
 };
-
+static uint8_t setting_entry = BUTTON_RELEASE;
+static uint8_t service_entry = BUTTON_RELEASE;
 void button_cb(uint8_t btn_num, btn_evt_t evt)
 {
 	static uint8_t has_event = 0;
-	static uint8_t lock_button = 0;
+
 	switch(btn_num)
 	{
 	case BTN_ENTER:
-		lock_button = 0;
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event = 1;
@@ -40,13 +40,12 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				break;
 			case LCD_TURN_OFF_UNIT_YES_STATE:
 				lcd_get_set_cb(LCD_POWER_OFF_EVT, NULL);
-
 				lcd_state = LCD_OFF_DISPLAY_WATING;
 				break;
 			case LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE:
 			case LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE:
 			case LCD_WARNING_TYPE_LID_OPEN_STATE:
-				lcd_state = LCD_OPERATION_MODE_STATE; //if in state warning -> press enter to go to next setting
+				lcd_state = LCD_MAIN_STATE; //if in state warning -> press enter to go to next setting
 				break;
 			//level 1
 			case LCD_MAIN_STATE:
@@ -62,30 +61,19 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				}
 //				lcd_state = LCD_OPERATION_MODE_STATE;
 				break;
-			case LCD_OPERATION_MODE_STATE:
-				lcd_state = LCD_SETTING_STATE;
-				break;
-			case LCD_SETTING_STATE:
-				lcd_state = LCD_SERVICE_STATE;
-				break;
-			case LCD_SERVICE_STATE:
-				lcd_state = LCD_MAIN_STATE;
-				lcd_get_set_cb(LCD_MAIN_FRAME_EVT, NULL); //Callback event for save to flash logic in main app
-				break;
 			//level 2 enter to level 3
 			//Operation mode
 			case LCD_OPERATION_MODE_FREEZER_STATE:
 				operation_mode_t op_mode = OPERATION_MODE_FREEZER;
 				lcd_get_set_cb(LCD_SET_OPERATION_MODE_EVT, &op_mode);
-				lcd_state = LCD_SETTING_STATE;
 				break;
 			case LCD_OPERATION_MODE_FRIDEGE_STATE:
 				operation_mode_t op_mode_1 = OPERATION_MODE_FRIDEGE;
 				lcd_get_set_cb(LCD_SET_OPERATION_MODE_EVT, &op_mode_1);
-				lcd_state = LCD_SETTING_STATE;
 				break;
 			case LCD_OPERATION_MODE_BACK_STATE:
-				lcd_state = LCD_SETTING_STATE;
+				lcd_state = LCD_MAIN_STATE;
+				lcd_get_set_cb(LCD_MAIN_FRAME_EVT, NULL);  //Callback event for save to flash logic in main app
 				break;
 
 			//setting date time
@@ -98,7 +86,8 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_TO_USB_STATE;
 				break;
 			case LCD_SETTING_BACK_STATE:
-				lcd_state = LCD_SETTING_STATE;
+//				lcd_get_set_cb(LCD_MAIN_FRAME_EVT, NULL); //Callback event for save to flash logic in main app
+				lcd_state = LCD_MAIN_STATE;
 				break;
 			//service temperature
 			case LCD_SERVICE_TEMPERATURE_STATE:
@@ -190,11 +179,11 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				break;
 			case LCD_SETTING_DOWNLOAD_DATA_CONTINUE_STATE:
 				//USB host init cb
-				lcd_get_set_cb(LCD_USB_INSERT_DOWNLOAD_EVT,NULL);
+				lcd.download_result = lcd_get_set_cb(LCD_USB_INSERT_DOWNLOAD_EVT,NULL);
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_COMPLETE_STATE;
 				break;
 			case LCD_SETTING_DOWNLOAD_DATA_COMPLETE_STATE:
-				lcd_state = LCD_SETTING_DOWNLOAD_DATA_CONTINUE_STATE;
+				lcd_state = LCD_MAIN_STATE;
 				break;
 			//Temperature go in set
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:
@@ -312,27 +301,60 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SERVICE_CALIBRATION_TEMP_OFFSET_STATE;
 				break;
 			}
-			lcd_get_set_cb(LCD_POWER_SHORT_PRESS_EVT, NULL);
-
-		}else if(evt == BUTTON_HOLD_2_SEC)
+		}else if(evt == BUTTON_PUSH)
 		{
-			if(lcd_state == LCD_MAIN_STATE)
+			lcd_get_set_cb(LCD_POWER_SHORT_PRESS_EVT, NULL);
+		}
+		else if(evt == BUTTON_HOLD_2_SEC)
+		{
+			if(setting_entry == BUTTON_RELEASE && service_entry == BUTTON_RELEASE) //Check if other button not push
 			{
-				has_event  = 1;
-				lcd_turn_off_unit(DISPLAY_UINIT_NO);
-				lcd_state = LCD_TURN_OFF_UNIT_NO_STATE;
-			}else if(lcd_state == LCD_OFF_DISPLAY_WATING)
-			{
-				lcd_state = LCD_MAIN_STATE;
-				lcd_get_set_cb(LCD_PWER_ON_EVT, NULL);
+				if(lcd_state == LCD_MAIN_STATE || lcd_state == LCD_WARNING_TYPE_LID_OPEN_STATE ||
+						lcd_state == LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE || lcd_state == LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE)
+				{
+					has_event  = 1;
+					lcd_turn_off_unit(DISPLAY_UINIT_NO);
+					lcd_state = LCD_TURN_OFF_UNIT_NO_STATE;
+				}else if(lcd_state == LCD_OFF_DISPLAY_WATING)
+				{
+					lcd_state = LCD_MAIN_STATE;
+					lcd_get_set_cb(LCD_POWER_ON_EVT, NULL);
+				}
 			}
+		}else if(evt == BUTTON_HOLD_3_SEC)
+		{
+			if(setting_entry == BUTTON_HOLD_3_SEC && service_entry == BUTTON_RELEASE) //Check enter setting entry and other button release
+			{
+				if(lcd_state == LCD_MAIN_STATE || lcd_state == LCD_WARNING_TYPE_LID_OPEN_STATE ||
+				lcd_state == LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE || lcd_state == LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE)
+				{
+					lcd_state = LCD_SETTING_DATETIME_STATE;
+					has_event  = 1;
+				}
+			}
+			setting_entry = BUTTON_HOLD_3_SEC;
+		}else if(evt == BUTTON_HOLD_5_SEC)
+		{
+			if(service_entry == BUTTON_HOLD_5_SEC && setting_entry == BUTTON_RELEASE) //Check enter service entry and other button release
+			{
+				if(lcd_state == LCD_MAIN_STATE || lcd_state == LCD_WARNING_TYPE_LID_OPEN_STATE ||
+				lcd_state == LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE || lcd_state == LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE)
+				{
+					lcd_state = LCD_SERVICE_TEMPERATURE_STATE;
+					has_event  = 1;
+				}
+			}
+			service_entry = BUTTON_HOLD_5_SEC;
+		}else if(evt == BUTTON_RELEASE)
+		{
+			service_entry = BUTTON_RELEASE;
+			setting_entry = BUTTON_RELEASE;
 		}
 		break;
 	case BTN_UP:
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event  = 1;
-			lock_button = 0; //Reset lock
 			switch(lcd_state)
 			{
 			//lcd turn off unit
@@ -358,9 +380,6 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				break;
 
 			//Setting
-			case LCD_SETTING_STATE:
-				lcd_state = LCD_SETTING_BACK_STATE;
-				break;
 			case LCD_SETTING_BACK_STATE:
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_STATE;
 				break;
@@ -371,9 +390,6 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_BACK_STATE;
 				break;
 				//Service
-			case LCD_SERVICE_STATE:
-				lcd_state = LCD_SERVICE_BACK_STATE;
-				break;
 			case LCD_SERVICE_BACK_STATE:
 				lcd_state = LCD_SERVICE_CALIBRATION_STATE;
 				break;
@@ -571,23 +587,32 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.temp_offset ++;
 				break;
 			}
-		}else if(evt == BUTTON_HOLD_2_SEC)
+		}else if(evt == BUTTON_PUSH)
 		{
-			if(lock_button == 1) //Check button down previous press
+			service_entry = BUTTON_PUSH;
+		}
+		else if(evt == BUTTON_HOLD_5_SEC)
+		{
+			if(service_entry == BUTTON_HOLD_5_SEC)
 			{
-				lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
+				if(lcd_state == LCD_MAIN_STATE || lcd_state == LCD_WARNING_TYPE_LID_OPEN_STATE ||
+				lcd_state == LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE || lcd_state == LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE)
+				{
+					lcd_state = LCD_SERVICE_TEMPERATURE_STATE;
+					has_event  = 1;
+				}
 			}
-			lock_button = 1;
-		}else
+			service_entry = BUTTON_HOLD_5_SEC;
+		}
+		else if(evt == BUTTON_RELEASE)
 		{
-			lock_button = 0;
+			service_entry = BUTTON_RELEASE;
 		}
 		break;
 	case BTN_DOWN:
 		if(evt == BUTTON_SHORT_PRESS)
 		{
 			has_event  = 1;
-			lock_button = 0;
 			switch(lcd_state)
 			{
 			//lcd turn off unit
@@ -612,9 +637,6 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_OPERATION_MODE_FREEZER_STATE;
 				break;
 				//Setting
-			case LCD_SETTING_STATE:
-				lcd_state = LCD_SETTING_DATETIME_STATE;
-				break;
 			case LCD_SETTING_DATETIME_STATE:
 				lcd_state = LCD_SETTING_DOWNLOAD_DATA_STATE;
 				break;
@@ -625,9 +647,6 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SETTING_DATETIME_STATE;
 				break;
 				//Service
-			case LCD_SERVICE_STATE:
-				lcd_state = LCD_SERVICE_TEMPERATURE_STATE;
-				break;
 			case LCD_SERVICE_TEMPERATURE_STATE:
 				lcd_state = LCD_SERVICE_ALARM_STATE;
 				break;
@@ -828,16 +847,25 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.temp_offset --;
 				break;
 			}
-		}else if(evt == BUTTON_HOLD_2_SEC)
+		}else if(evt == BUTTON_PUSH)
 		{
-			if(lock_button == 1) //Check button down previous press
+			setting_entry = BUTTON_PUSH;
+		}
+		else if(evt == BUTTON_HOLD_3_SEC)
+		{
+			if(setting_entry == BUTTON_HOLD_3_SEC) //Check enter setting entry and other button release
 			{
-				lcd_get_set_cb(LCD_LOCK_UNLOCK_KEY_EVT, NULL);
+				if(lcd_state == LCD_MAIN_STATE || lcd_state == LCD_WARNING_TYPE_LID_OPEN_STATE ||
+				lcd_state == LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE || lcd_state == LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE)
+				{
+					lcd_state = LCD_SETTING_DATETIME_STATE;
+					has_event  = 1;
+				}
 			}
-			lock_button = 1;
-		}else
+			setting_entry = BUTTON_HOLD_3_SEC;
+		}else if(evt == BUTTON_RELEASE)
 		{
-			lock_button = 0;
+			setting_entry = BUTTON_RELEASE;
 		}
 	}
 	if(has_event)
@@ -864,12 +892,6 @@ void lcd_interface_show(lcd_state_t state)
 		break;
 	case LCD_OPERATION_MODE_STATE:
 		lcd_operation_mode_screen(lcd.op_mode);
-		break;
-	case LCD_SETTING_STATE:
-		lcd_setting(SETTING_DEFAULT);
-		break;
-	case LCD_SERVICE_STATE:
-		lcd_service(SERVICE_DEFAULT);
 		break;
 	//Level 2
 	case LCD_OPERATION_MODE_FREEZER_STATE:
@@ -1005,7 +1027,7 @@ void lcd_interface_show(lcd_state_t state)
 		lcd_setting_download_data_insert(SETTING_DOWNLOAD_DATA_CANCEL);
 		break;
 	case LCD_SETTING_DOWNLOAD_DATA_COMPLETE_STATE:
-		lcd_setting_download_data_complete();
+		lcd_setting_download_data_complete(lcd.download_result);
 		break;
 
 	case LCD_SERVICE_TEMPERATURE_FRIDGE_SETPOINT_STATE:

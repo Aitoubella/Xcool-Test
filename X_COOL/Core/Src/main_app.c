@@ -23,7 +23,7 @@
 #include "ili9341.h"
 #include "button.h"
 
-#define MAIN_TASK_TICK_MS    100 //ms
+#define MAIN_TASK_TICK_MS         500 //ms
 #define RTC_TASK_TICK_MS          1000
 #define BAT_OUT_OF_VALUE     7 //in perent
 #define MINUTE_TO_COUNT(x) (x*60*1000/MAIN_TASK_TICK_MS) //convert minute to tick count in main task
@@ -43,6 +43,8 @@ double limit_min = 0;
 
 #define CHAMBER_TEMPERATURES_SENSOR           RTD6
 #define LID_SWITCH_SENSOR                     RTD4
+#define AMBIENT_TEMPERATURE_SENSOR            RTD3
+
 
 #define LID_CLOSE_DELAY_MINS                   1
 
@@ -91,6 +93,7 @@ typedef struct
 	uint8_t cmprsr_fan;
 }output_ctrl_t;
 output_ctrl_t ctl = {0};
+output_ctrl_t ctl_pre = {0};
 alarm_count_t alarm_count;
 
 typedef struct
@@ -141,6 +144,7 @@ lcd_inter_t setting = {
 	.alarm_mute_duration = 1,//Minute
 	.deviation_freezer = 3,
 	.deviation_fridge = 3,
+	.onoff = DISPLAY_UINIT_YES,
 };
 extern lcd_inter_t lcd;
 extern lcd_state_t lcd_state;
@@ -266,16 +270,16 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 			printf("\nStart download ");
 			sprintf(file_name_src,"%s%s",USERPath,LOG_FILE_NAME);
 			sprintf(file_name_dst,"%s%s",USBHPath,LOG_FILE_NAME);
-			if(copy_file(file_name_dst,file_name_src) == FR_OK)
-			{
-				printf("success!");
-				return 1;
-			}
-			else
-			{
-				printf("failed!");
-				return 0;
-			}
+            if(copy_file(file_name_dst,file_name_src) == FR_OK)
+            {
+                printf("success!");
+				return (uint8_t)SETTING_DOWNLOAD_DATA_SUCCESS;
+            }
+            else
+            {
+                printf("failed!");
+				return (uint8_t)SETTING_DOWNLOAD_DATA_FAILED;
+            }
 			break;
 		case LCD_MAIN_FRAME_EVT:
 			if(save_state == CHANGE_DATA_STATE)
@@ -284,33 +288,22 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 			}
 			break;
 		case LCD_POWER_OFF_EVT:
-//			LED_L(); //Turn off Back Light led
-			pwr_ctrl_off();
+			LED_L(); //Turn off Back Light led
+			bms_off_charge();
+			setting.onoff = DISPLAY_UINIT_NO;
 			break;
-		case LCD_PWER_ON_EVT:
+		case LCD_POWER_ON_EVT:
+			setting.onoff = DISPLAY_UINIT_YES;
+//			bms_on_charge();
 //			LED_H(); //Turn on  Back Light led
-			pwr_ctrl_on();
+			HAL_NVIC_SystemReset();
 			break;
 		case LCD_POWER_SHORT_PRESS_EVT:
 			if(main_state == MAIN_WARNING_WAITING_STATE)
 			{
-				//alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
+				alarm_count.alarm_mute =  MINUTE_TO_COUNT(setting.alarm_mute_duration); //Reload alarm_count
 			}
 			break;
-		/*case LCD_LOCK_UNLOCK_KEY_EVT:
-			setting.lock ^= 1;
-			if(setting.lock)
-			{
-				buzzer_lock();
-				button_lock(&btn[BTN_ENTER]);
-
-			}else
-			{
-				buzzer_unlock();
-				button_unlock(&btn[BTN_ENTER]);
-			}
-			break;
-		*/
 	}
 	if(save_state == NEED_SAVE_STATE)// setting param change?
 	{
@@ -326,7 +319,7 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 void rtc_task(void)
 {
 	DS1307_GetDate(&setting.datetime.day, &setting.datetime.month, &setting.datetime.year);
-	if(setting.datetime.year < 2023 )
+	if(setting.datetime.year < 2023 || setting.datetime.year > 2100)
 	{
 		DS1307_SetYear(2023);
 	}
@@ -386,22 +379,29 @@ lid_state_t get_lid_state(void)
 
 void main_task(void)
 {
-	static lcd_inter_t* lcd_param;
-
-
+	//Check device is off? -> Not excute next code
+	if(setting.onoff == DISPLAY_UINIT_NO) //Off
+	{
+		buzzer_stop();
+		cmprsr_power_off();
+		cmprsr_fan_off();
+		fan1_off();
+		fan2_off();
+		htr_off();
+		alarm_count.alarm_mute = 0;
+		alarm_count.lid_open = 0;
+		alarm_count.over_max_temp = 0;
+		alarm_count.under_min_temp = 0;
+		interval_count.lid = MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS);
+		interval_count.temper = SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL);
+		return;
+	}
 	//Get temperature with temperature offset from setting
 	setting.temperature = (int16_t) (rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR)) + setting.temp_offset;
+	setting.second_temperature = (int16_t) (rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)) + setting.temp_offset;
 	//Get bat status
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();
-	//Get power status
-	if(get_power_mode() == POWER_MODE_BAT && setting.pwr_mode != POWER_MODE_BAT) //check swich AC/DC to BAT
-	{
-		interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS); //Reset counter
-	}
-	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
-
-	setting.pwr_mode = get_power_mode();
 	//Get Lid state
 	setting.lid_state = get_lid_state();
 
@@ -416,8 +416,6 @@ void main_task(void)
 		htr_off(); //Heater on in freezer mode,off in refrigerator off
 
 		//Deviation logic control compressor
-
-		/*
 		if(is_rtd_started())
 		{
 			if(setting.temperature <= setting.setpoint_fridge) //Reach setpoint -> Off compressor
@@ -428,21 +426,21 @@ void main_task(void)
 				ctl.cmprsr = TURN_ON;
 			}
 		}
-        */
+
 		if(setting.temperature < (setting.setpoint_fridge - setting.alarm_temperature_deviation))    //Check under min temperature
 		{
 			//Increase count for delay check later
 			alarm_count.under_min_temp += 1;
-			//alarm_count.over_max_temp = 0;
+			alarm_count.over_max_temp = 0;
 
 		}else if(setting.temperature > (setting.setpoint_fridge + setting.alarm_temperature_deviation))//Check over max temperature
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
-			//alarm_count.under_min_temp = 0;
+			alarm_count.under_min_temp = 0;
 		}else
 		{
-			//alarm_count.over_max_temp = 0;
+			alarm_count.over_max_temp = 0;
 			alarm_count.under_min_temp = 0;
 		}
 	}else if(setting.op_mode == OPERATION_MODE_FREEZER)
@@ -469,7 +467,7 @@ void main_task(void)
 		{
 			//Increase count for delay check later
 			alarm_count.over_max_temp += 1;
-			//alarm_count.under_min_temp = 0;
+			alarm_count.under_min_temp = 0;
 		}else
 		{
 			alarm_count.over_max_temp = 0;
@@ -478,11 +476,9 @@ void main_task(void)
 	}
 
 
-	//Chamber fan always on in AC and DC operation
-	if(setting.pwr_mode == POWER_MODE_AC || setting.pwr_mode == POWER_MODE_DC)
-	{
-		ctl.fan2 = TURN_ON;
-	}
+	//Chamber fan always on: change in BUGID:17 Leave F2 running on all power modes
+	ctl.fan2 = TURN_ON;
+
 
 	//Lid check open
 	if(setting.lid_state == LID_OPEN)
@@ -509,22 +505,44 @@ void main_task(void)
 		ctl.cmprsr_fan = TURN_OFF;
 	}
 
-	//If in Battery mode -> Fan only run when compressor run
-	if(setting.pwr_mode == POWER_MODE_BAT)
+	//If in Battery mode -> Fan only run when compressor run-> change to BUGID17:Leave F2 running on all power modes
+//	if(setting.pwr_mode == POWER_MODE_BAT)
+//	{
+//		ctl.fan2 = ctl.cmprsr;
+//	}
+
+
+	if(interval_count.cmprsr) //Currently already delay on? -> just turn off cmprsr
 	{
-		ctl.fan2 = ctl.cmprsr;
+		ctl.cmprsr = TURN_OFF;
+	}else
+	{
+		if((ctl_pre.cmprsr != ctl.cmprsr) && (ctl.cmprsr == TURN_OFF)) //Check if compressor change off->on?
+		{
+			interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS);    //Reset counter
+		}
+		//Get power status
+		if(get_power_mode() == POWER_MODE_BAT && setting.pwr_mode != POWER_MODE_BAT) //check swich AC/DC to BAT
+		{
+			interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS); //Reset counter
+		}
 	}
+
+	setting.pwr_mode = get_power_mode(); //Need to put this logic after check swich AC/DC to BAT
+	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
 
 	//Fan1 control tight to compressor
 	ctl.fan1 = ctl.cmprsr;
 
-	//Logic Delay when swich AC/DC to BAT
-	//if(interval_count.cmprsr) ctl.cmprsr = TURN_OFF; //If have delay need when AC/DC to BAT
+	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 
-
-
-	if(ctl.cmprsr == TURN_ON) cmprsr_power_on();
-	else cmprsr_power_off();
+	if(ctl.cmprsr == TURN_ON)
+	{
+		cmprsr_power_on();
+	}else
+	{
+		cmprsr_power_off();
+	}
 	if(ctl.cmprsr_fan == TURN_ON) cmprsr_fan_on();
 	else cmprsr_fan_off();
 	if(ctl.fan1 == TURN_ON) fan1_on();
@@ -560,74 +578,78 @@ void main_task(void)
 	{
 		setting.warning_type = WARNING_TYPE_NONE;
 	}
-
+	//Alarm down count
+	if(alarm_count.alarm_mute > 0)
+	{
+		alarm_count.alarm_mute--; //Check alarm mute count
+	}
   /*
    * Note lcd_state need to consider carefully for set lcd_state
    * */
 	switch((uint8_t)lcd_state)
 	{
 		case LCD_MAIN_STATE:
-			//Check any warning
-			if(setting.warning_type == WARNING_TYPE_LID_OPEN) //Warning lid higher priority
-			{
-				lcd_state = LCD_WARNING_TYPE_LID_OPEN_STATE; //Change lcd state
-				lcd_interface_show(lcd_state);  //show warning on lcd
-			}else if(setting.warning_type == WARNING_TYPE_OVER_MAX_TEMP)
-			{
-				lcd_state = LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE; //Change lcd state
-				lcd_interface_show(lcd_state);         //show warning on lcd
-			}else if(setting.warning_type == WARNING_TYPE_UNDER_MIN_TEMP)
-			{
-				lcd_state = LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE;//Change lcd state
-				lcd_interface_show(lcd_state); //show warning on lcd
-			}else //Has no warning
-			{
 				//Check current value is differ from lcd value -> update lcd
-				lcd_param =  lcd_interface_get_param();
 				if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
 				{
-					if(lcd_param->temperature != setting.temperature)
+					if(lcd.temperature != setting.temperature)
 					{
-						lcd_param->temperature = setting.temperature;
+						lcd.temperature = setting.temperature;
 						interval_count.temper = 0;
 						lcd_interface_show(lcd_state);
 					}
 				}
 
-				if(lcd_param->op_mode != setting.op_mode || lcd_param->pwr_mode != setting.pwr_mode
-				  || lcd_param->bat_state != setting.bat_state
-				  || lcd_param->bat_value != setting.bat_value || lcd_param->spk_mode != setting.spk_mode
-				  || lcd_param->bat_signal != setting.bat_signal)
+				if(lcd.op_mode != setting.op_mode || lcd.pwr_mode != setting.pwr_mode
+				  || lcd.bat_state != setting.bat_state
+				  || lcd.bat_value != setting.bat_value || lcd.spk_mode != setting.spk_mode
+				  || lcd.bat_signal != setting.bat_signal || lcd.onoff != setting.onoff);
 				{
 					//Update lcd main frame
-					lcd_param->op_mode = setting.op_mode;
-					lcd_param->pwr_mode = setting.pwr_mode;
-//					lcd_param->temperature = setting.temperature;
-					lcd_param->bat_state = setting.bat_state;
-					lcd_param->bat_value = setting.bat_value;
-					lcd_param->spk_mode = setting.spk_mode;
-					lcd_param->bat_signal = setting.bat_signal;
+					lcd.op_mode = setting.op_mode;
+					lcd.pwr_mode = setting.pwr_mode;
+//					lcd.temperature = setting.temperature;
+					lcd.bat_state = setting.bat_state;
+					lcd.bat_value = setting.bat_value;
+					lcd.spk_mode = setting.spk_mode;
+					lcd.bat_signal = setting.bat_signal;
 					//Reload main frame
 					lcd_interface_show(lcd_state);
 				}
-			}
+				if(alarm_count.alarm_mute == 0)
+				{
+					if(setting.warning_type == WARNING_TYPE_LID_OPEN) //Warning lid higher priority
+					{
+						lcd_state = LCD_WARNING_TYPE_LID_OPEN_STATE; //Change lcd state
+						lcd_interface_show(lcd_state);  //show warning on lcd
+					}else if(setting.warning_type == WARNING_TYPE_OVER_MAX_TEMP)
+					{
+						lcd_state = LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE; //Change lcd state
+						lcd_interface_show(lcd_state);         //show warning on lcd
+					}else if(setting.warning_type == WARNING_TYPE_UNDER_MIN_TEMP)
+					{
+						lcd_state = LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE;//Change lcd state
+						lcd_interface_show(lcd_state); //show warning on lcd
+					}
+				}
 		break;
 		case LCD_WARNING_TYPE_UNDER_MIN_TEMP_STATE:
 		case LCD_WARNING_TYPE_OVER_MAX_TEMP_STATE:
 		case LCD_WARNING_TYPE_LID_OPEN_STATE:
-			if(setting.warning_type == WARNING_TYPE_NONE)  //Waiting for end warning
+			if(setting.warning_type == WARNING_TYPE_NONE)  //Waiting for end warning or alarm mute count reset
 			{
 				lcd_state = LCD_MAIN_STATE;
 				lcd_interface_show(lcd_state);
 			}else //Still warning.
 			{
+				//Need reload temperature to update lcd
 				if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
 				{
-					if(lcd_param->temperature != setting.temperature)
+					if(lcd.temperature != setting.temperature)
 					{
-						//lcd_param->temperature = setting.temperature;
-						//interval_count.temper = 0;
-						//lcd_interface_show(lcd_state); //Reload when temperature change
+						lcd.temperature = setting.temperature;
+						interval_count.temper = 0;
+						lcd_interface_show(lcd_state); //Reload when temperature change
 					}
 				}
 			}
@@ -641,18 +663,15 @@ void main_task(void)
 		case MAIN_NORMAL_STATE:
 			if(setting.warning_type == WARNING_TYPE_LID_OPEN) //Warning lid higher priority
 			{
-				buzzer_lid_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log imediataly when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_OVER_MAX_TEMP)
 			{
-				 buzzer_over_temp_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}else if(setting.warning_type == WARNING_TYPE_UNDER_MIN_TEMP)
 			{
-				buzzer_under_temp_warning();
-				//logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
+				logging_write(LOG_FILE_NAME, &setting);//Log immediately when warning
 				main_state = MAIN_WARNING_WAITING_STATE;//Move to waiting state.
 			}
 			break;
@@ -668,7 +687,6 @@ void main_task(void)
 				alarm_count.alarm_mute = 0;
 			}else //Still warning?
 			{
-				if(alarm_count.alarm_mute > 0) alarm_count.alarm_mute--;
 				if(alarm_count.alarm_mute == 0)
 				{
 					setting.spk_mode = SPEAKER_MODE_ON; //Lcd speaker on again
@@ -720,7 +738,7 @@ void main_task(void)
 	if(interval_count.logging >= MINUTE_TO_COUNT(setting.logging_interval))
 	{
 		interval_count.logging = 0;
-		//logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
+		logging_write(LOG_FILE_NAME, &setting);//Log when reach logging interval in setting.
 	}
 }
 

@@ -22,7 +22,7 @@
 #define DS1307_REG_UTC_MIN	0x09
 #define DS1307_REG_CENT    	0x10
 #define DS1307_REG_RAM   	0x11
-#define DS1307_TIMEOUT		1000
+#define DS1307_TIMEOUT		100
 /*----------------------------------------------------------------------------*/
 extern I2C_HandleTypeDef *_ds1307_ui2c;
 
