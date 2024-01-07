@@ -102,6 +102,7 @@ typedef struct
 	uint32_t logging;
 	uint32_t temper;
 	uint32_t cmprsr;
+	uint8_t power_rst;
 }interval_count_t;
 
 interval_count_t interval_count =
@@ -534,8 +535,15 @@ void main_task(void)
 	//Fan1 control tight to compressor
 	ctl.fan1 = ctl.cmprsr;
 
-	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
+	//Check cmprsr logic is revert->reset power reset count to zero
+	if(ctl_pre.cmprsr != ctl.cmprsr)
+	{
+		interval_count.power_rst = 0; //Reset to zero
+	}
+	interval_count.power_rst ++;
 
+
+	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 	if(ctl.cmprsr == TURN_ON)
 	{
 		cmprsr_power_on();
@@ -543,6 +551,16 @@ void main_task(void)
 	{
 		cmprsr_power_off();
 	}
+
+	//Logic reset power 12 after 1 second compressor switch  New feature BUGID:21
+	if(interval_count.power_rst == SECOND_TO_COUNT(1))
+	{
+		pwr_12v_off();
+	}else if(interval_count.power_rst == SECOND_TO_COUNT(2))
+	{
+		pwr_12v_on();
+	}
+
 	if(ctl.cmprsr_fan == TURN_ON) cmprsr_fan_on();
 	else cmprsr_fan_off();
 	if(ctl.fan1 == TURN_ON) fan1_on();
