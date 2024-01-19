@@ -117,7 +117,8 @@ void lcd_label_set_param(lv_obj_t* label, const char* txt, lv_coord_t x, lv_coor
 	lv_obj_set_style_text_font(label, font, LV_PART_MAIN| LV_STATE_DEFAULT);
 }
 
-void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_mode_t pwr_mode, operation_mode_t op_mode, uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal)
+void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_mode_t pwr_mode, operation_mode_t op_mode,
+		uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal, const char* fw_ver)
 {
 
 	lcd_ui_t speaker_symbol = FONT_VERDENA_24;
@@ -126,7 +127,7 @@ void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_m
 	lcd_ui_t power_mode = FONT_VERDENA_40;
 	lcd_ui_t bat_state = FONT_VERDENA_36;
 	lcd_ui_t bat_symbol = FONT_VERDENA_120;
-
+	lcd_ui_t ver_symbol = FONT_MONT_16;
 	lcd_set_background_color(screen, BLACK_COLOR);
 
 	if(sp_mode ==  SPEAKER_MODE_ON)
@@ -185,7 +186,6 @@ void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_m
 
 
 	lcd_label_set_param(bat_symbol.obj,  LV_SYMBOL_BATTERY_EMPTY, 60, 62, bat_symbol.font, WHITE_COLOR);
-	lcd_set_background_color(bat_symbol.obj, YELLOW_COLOR);
 	if(bat_st == BATTERY_STATE_CHARGING)
 	{
 		snprintf(temp_buff, MAX_TEMP_CHAR, "%d%s",bat_value,LV_SYMBOL_CHARGE);
@@ -195,7 +195,7 @@ void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_m
 		snprintf(temp_buff, MAX_TEMP_CHAR, "%d%%",bat_value);
 	}
 	lcd_label_set_param(bat_state.obj,temp_buff , 58, 62, bat_state.font, WHITE_COLOR);
-	lcd_set_background_color(bat_symbol.obj, YELLOW_COLOR);
+	lcd_label_set_param(ver_symbol.obj, fw_ver, -120, 105, ver_symbol.font, WHITE_COLOR);
 }
 
 void lcd_operation_mode_screen(operation_mode_t index)
@@ -749,6 +749,10 @@ void lcd_service_temperature_fridge_deviation_set(int8_t value)
 	lcd_label_set_param(temper_2.obj, temp_buff, 0, 37, temper_2.font, WHITE_COLOR);
 	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value - 1);
 	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
+	if(value <= 1)
+	{
+		lv_obj_add_flag(temper_3.obj,LV_OBJ_FLAG_HIDDEN);
+	}
 }
 
 
@@ -791,6 +795,10 @@ void lcd_service_temperature_freezer_deviation_set(int8_t value)
 	lcd_label_set_param(temper_2.obj, temp_buff, 0, 37, temper_2.font, WHITE_COLOR);
 	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value - 1);
 	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
+	if(value <= 1)
+	{
+		lv_obj_add_flag(temper_3.obj,LV_OBJ_FLAG_HIDDEN);
+	}
 }
 
 void lcd_service_alarm_temperature(service_alarms_temperature_t index)
@@ -828,6 +836,10 @@ void lcd_service_alarm_temperature_temp_deviation_set(int8_t value)
 	lcd_label_set_param(temper_2.obj, temp_buff, 0, 37, temper_2.font, WHITE_COLOR);
 	snprintf(temp_buff, MAX_TEMP_CHAR, "%d°C",value - 1);
 	lcd_label_set_param(temper_3.obj, temp_buff, 0, 74, temper_3.font, WHITE_COLOR);
+	if(value <= 0)
+	{
+		lcd_hide_label(temper_3.obj);
+	}
 }
 
 void lcd_service_alarm_temperature_alarm_delay_set(uint8_t value)

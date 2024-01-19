@@ -13,7 +13,7 @@
 #include "DS1307.h"
 #include "ili9341.h"
 extern lcd_inter_t setting;
-
+extern const char *fw_version;
 uint8_t lcd_state = LCD_MAIN_STATE;
 
 lcd_inter_t lcd =
@@ -773,7 +773,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.setpoint_fridge --;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FRIDGE_DEVIATION_SET_STATE:
-				lcd.deviation_fridge --;
+				if(lcd.deviation_fridge > 1) lcd.deviation_fridge --;
 				break;
 
 			case LCD_SERVICE_TEMPERATURE_FREEZER_SETPOINT_STATE:
@@ -790,7 +790,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd.setpoint_freezer --;
 				break;
 			case LCD_SERVICE_TEMPERATURE_FREEZER_DEVIATION_SET_STATE:
-				lcd.deviation_freezer --;
+				if(lcd.deviation_freezer > 1) lcd.deviation_freezer --;
 				break;
 			//Alarm temp deviation set
 			case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE:
@@ -803,7 +803,7 @@ void button_cb(uint8_t btn_num, btn_evt_t evt)
 				lcd_state = LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_STATE;
 				break;
 			case LCD_SERVICE_ALARM_TEMP_TEMP_DEVIATION_SET_STATE:
-				lcd.alarm_temperature_deviation -- ;
+				if(lcd.alarm_temperature_deviation > 0) lcd.alarm_temperature_deviation -- ;
 				break;
 			//Alarm delay set
 			case LCD_SERVICE_ALARM_TEMP_ALARM_DELAY_SET_STATE:
@@ -888,7 +888,7 @@ void lcd_interface_show(lcd_state_t state)
 		lcd_turn_off_unit(DISPLAY_UINIT_YES);
 		break;
 	case LCD_MAIN_STATE:
-		lcd_main_screen_screen(lcd.spk_mode, lcd.temperature, lcd.pwr_mode, lcd.op_mode, lcd.bat_value, lcd.bat_state,lcd.bat_signal);
+		lcd_main_screen_screen(lcd.spk_mode, lcd.temperature, lcd.pwr_mode, lcd.op_mode, lcd.bat_value, lcd.bat_state,lcd.bat_signal,fw_version);
 		break;
 	case LCD_OPERATION_MODE_STATE:
 		lcd_operation_mode_screen(lcd.op_mode);

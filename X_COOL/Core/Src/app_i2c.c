@@ -18,6 +18,7 @@
 HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData,uint16_t Size, uint32_t Timeout)
 {
 	static HAL_StatusTypeDef status = HAL_OK;
+	uint32_t error_count = 0;
 	status = HAL_I2C_Master_Transmit_IT(hi2c, DevAddress, pData, Size);
 	if(status != HAL_OK)
 	{
@@ -35,7 +36,15 @@ HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddre
 	  is ongoing. */
 	while (HAL_I2C_GetState(hi2c) != HAL_I2C_STATE_READY)
 	{
-
+		if(error_count++ > 1000)   //If reach max error count ->reset I2C
+		{
+#ifdef I2C_DEBUG_PRINT
+		printf("\nI2C not ready error");
+#endif
+			HAL_I2C_DeInit(hi2c);
+			HAL_I2C_Init(hi2c);
+			break;
+		}
 	}
 	return status;
 }
@@ -43,6 +52,7 @@ HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddre
 HAL_StatusTypeDef I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData,uint16_t Size, uint32_t Timeout)
 {
 	static HAL_StatusTypeDef status = HAL_OK;
+	uint32_t error_count = 0;
 	status = HAL_I2C_Master_Receive_IT(hi2c, DevAddress, pData, Size);
 	if(status != HAL_OK)
 	{
@@ -61,7 +71,15 @@ HAL_StatusTypeDef I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddres
 	  is ongoing. */
 	while (HAL_I2C_GetState(hi2c) != HAL_I2C_STATE_READY)
 	{
-
+		if(error_count++ > 1000)   //If reach max error count ->reset I2C
+		{
+#ifdef I2C_DEBUG_PRINT
+			printf("\nI2C not ready error");
+#endif
+			HAL_I2C_DeInit(hi2c);
+			HAL_I2C_Init(hi2c);
+			break;
+		}
 	}
 
 	return status;

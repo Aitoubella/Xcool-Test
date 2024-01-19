@@ -43,13 +43,15 @@ double limit_min = 0;
 
 #define CHAMBER_TEMPERATURES_SENSOR           RTD6
 #define LID_SWITCH_SENSOR                     RTD4
-#define AMBIENT_TEMPERATURE_SENSOR            RTD3
+#define AMBIENT_TEMPERATURE_SENSOR            RTD5
 
 
 #define LID_CLOSE_DELAY_MINS                   1
 
-#define TEMPERATURE_SHOW_INTERVAL              5 //Second
+#define TEMPERATURE_SHOW_INTERVAL              15 //Second
 #define CMPRSR_DELAY_ON_MINS                   1 //Minute
+
+const char *fw_version = "v1.6";
 
 typedef enum
 {
@@ -102,7 +104,6 @@ typedef struct
 	uint32_t logging;
 	uint32_t temper;
 	uint32_t cmprsr;
-	uint8_t power_rst;
 }interval_count_t;
 
 interval_count_t interval_count =
@@ -130,21 +131,21 @@ lcd_inter_t setting = {
 	.bat_value = 100, //%
 	.bat_state = BATTERY_STATE_NOT_CHARGE,
 	.bat_signal = BATTER_WARNING_LOW,
-	.alarm_bat = 15, //%
+	.alarm_bat = 20, //%
 	.alarm_lid = 2,  //mins
-	.alarm_temperature_delay = 1, //mins
+	.alarm_temperature_delay = 5, //mins
 	.alarm_temperature_deviation = 5, // Celcius
 	.temperature = 31,//Celcius
 	.logging_interval = 5,//Mins
-	.setpoint_fridge = 31,//Celcius
-	.setpoint_freezer = 31,//Celcius
+	.setpoint_fridge = 4,//Celcius
+	.setpoint_freezer = -20,//Celcius
 	.temp_offset = 0, //Celcius
 	.datetime.year = 2023,
 	.datetime.month = 11,
 	.datetime.day = 3,
-	.alarm_mute_duration = 1,//Minute
-	.deviation_freezer = 3,
-	.deviation_fridge = 3,
+	.alarm_mute_duration = 20,//Minute
+	.deviation_freezer = 2,
+	.deviation_fridge = 2,
 	.onoff = DISPLAY_UINIT_YES,
 };
 extern lcd_inter_t lcd;
@@ -329,15 +330,7 @@ void rtc_task(void)
 
 uint8_t get_bat_value(void)
 {
-
-//	if(chrg->bat_voltage > chrg->bat_min_voltage)
-//	{
-//		bat_value =  chrg->bat_voltage - chrg->bat_min_voltage;
-//		bat_value = bat_value * 100 /(chrg->max_charge_voltage - chrg->bat_min_voltage);
-//	}
-//	if(bat_value > 100) bat_value = 100;
-
- 	return (uint8_t)(bms_get_charge_info()->bat_percent);
+ 	return bms_bat_percent();
 }
 
 battery_state_t get_bat_state(void)
@@ -523,25 +516,17 @@ void main_task(void)
 			interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS);    //Reset counter
 		}
 		//Get power status
-		if(get_power_mode() == POWER_MODE_BAT && setting.pwr_mode != POWER_MODE_BAT) //check swich AC/DC to BAT
+		if(get_power_mode() != setting.pwr_mode) //Check switch power source
 		{
 			interval_count.cmprsr = MINUTE_TO_COUNT(CMPRSR_DELAY_ON_MINS); //Reset counter
 		}
 	}
 
-	setting.pwr_mode = get_power_mode(); //Need to put this logic after check swich AC/DC to BAT
+	setting.pwr_mode = get_power_mode(); //Need to put this logic after check switch power source
 	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
 
 	//Fan1 control tight to compressor
 	ctl.fan1 = ctl.cmprsr;
-
-	//Check cmprsr logic is revert->reset power reset count to zero
-	if(ctl_pre.cmprsr != ctl.cmprsr)
-	{
-		interval_count.power_rst = 0; //Reset to zero
-	}
-	interval_count.power_rst ++;
-
 
 	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 	if(ctl.cmprsr == TURN_ON)
@@ -551,16 +536,6 @@ void main_task(void)
 	{
 		cmprsr_power_off();
 	}
-
-	//Logic reset power 12 after 1 second compressor switch  New feature BUGID:21
-	if(interval_count.power_rst == SECOND_TO_COUNT(1))
-	{
-		pwr_12v_off();
-	}else if(interval_count.power_rst == SECOND_TO_COUNT(2))
-	{
-		pwr_12v_on();
-	}
-
 	if(ctl.cmprsr_fan == TURN_ON) cmprsr_fan_on();
 	else cmprsr_fan_off();
 	if(ctl.fan1 == TURN_ON) fan1_on();
@@ -771,6 +746,8 @@ void main_app_init(void)
 	flash_mgt_read((uint32_t *)&setting, sizeof(lcd_inter_t));
 	//Load all current param to lcd param
 	memcpy((uint8_t *)&lcd,(uint8_t *)&setting, sizeof(lcd_inter_t));
+	//Get power mode
+	setting.pwr_mode = get_power_mode();
 	//LCD ui
 	lcd_ui_init(); //Init lvgl, porting
 	lcd_interface_init(); //Init api and show main frame

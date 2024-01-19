@@ -13,6 +13,10 @@
 #include "stm32l4xx_hal.h"
 #include "quartic.h"
 #include <string.h>
+//#define RTD_LOG    1
+#ifdef RTD_LOG
+#include "printf.h"
+#endif
 
 #define ADC_VREF_mV           3359       //Voltage adc in mV
 #define RTD_MAX_CHANNEL       6
@@ -191,6 +195,9 @@ void rtd_init(void)
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
+#ifdef RTD_LOG
+	printf("%d,",adc_buff[RTD6]);
+#endif
 	for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i++)
 	{
 		adc_total[i] += adc_buff[i];
