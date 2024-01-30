@@ -51,6 +51,9 @@ double limit_min = 0;
 #define TEMPERATURE_SHOW_INTERVAL              15 //Second
 #define CMPRSR_DELAY_ON_MINS                   1 //Minute
 
+
+
+#define POWER_12V_RESET_INTERVAL              60 //Second
 const char *fw_version = "v1.6";
 
 typedef enum
@@ -104,6 +107,7 @@ typedef struct
 	uint32_t logging;
 	uint32_t temper;
 	uint32_t cmprsr;
+	uint32_t pwr_12v;
 }interval_count_t;
 
 interval_count_t interval_count =
@@ -399,7 +403,18 @@ void main_task(void)
 	//Get Lid state
 	setting.lid_state = get_lid_state();
 
+	// Feature logic 27 on/off each 60s
+	interval_count.pwr_12v += 1;
+	if(interval_count.pwr_12v == SECOND_TO_COUNT(POWER_12V_RESET_INTERVAL))
+	{
+		pwr_12v_off();
+	}
 
+	if(interval_count.pwr_12v >= (SECOND_TO_COUNT(POWER_12V_RESET_INTERVAL) + SECOND_TO_COUNT(2)))
+	{
+		pwr_12v_on();
+		interval_count.pwr_12v = 0;
+	}
 
 	//temperature delay interval implement
 	interval_count.temper ++;
