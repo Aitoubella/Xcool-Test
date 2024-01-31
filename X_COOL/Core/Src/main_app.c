@@ -22,6 +22,7 @@
 #include "File_Handling.h"
 #include "ili9341.h"
 #include "button.h"
+#include "tem_roll.h"
 
 #define MAIN_TASK_TICK_MS         500 //ms
 #define RTC_TASK_TICK_MS          1000
@@ -100,6 +101,7 @@ typedef struct
 output_ctrl_t ctl = {0};
 output_ctrl_t ctl_pre = {0};
 alarm_count_t alarm_count;
+uint8_t is_board_start = 0;
 
 typedef struct
 {
@@ -113,7 +115,6 @@ typedef struct
 interval_count_t interval_count =
 {
 	.lid = MINUTE_TO_COUNT(LID_CLOSE_DELAY_MINS),
-	.temper = SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL),
 };
 
 
@@ -394,9 +395,20 @@ void main_task(void)
 		interval_count.temper = SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL);
 		return;
 	}
+
+	//temperature delay interval implement
+	interval_count.temper ++;
 	//Get temperature with temperature offset from setting
-	setting.temperature = (int16_t) (rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR)) + setting.temp_offset;
-	setting.second_temperature = (int16_t) (rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)) + setting.temp_offset;
+	if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
+	{
+		interval_count.temper = 0;
+		tem_roll_put(rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR) + setting.temp_offset);
+	}
+
+
+
+	setting.temperature = (int16_t)round(tem_roll_get());
+	setting.second_temperature = (int16_t) round((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)) + setting.temp_offset);
 	//Get bat status
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();
@@ -416,8 +428,7 @@ void main_task(void)
 		interval_count.pwr_12v = 0;
 	}
 
-	//temperature delay interval implement
-	interval_count.temper ++;
+
 
 	//Check exeed temperature setting
 	if(setting.op_mode == OPERATION_MODE_FRIDEGE)
@@ -425,7 +436,7 @@ void main_task(void)
 		htr_off(); //Heater on in freezer mode,off in refrigerator off
 
 		//Deviation logic control compressor
-		if(is_rtd_started())
+		if(tem_roll_enough_data())
 		{
 			if(setting.temperature <= setting.setpoint_fridge) //Reach setpoint -> Off compressor
 			{
@@ -457,7 +468,7 @@ void main_task(void)
 		htr_on(); //Heater on in freezer mode,off in refrigerator mode
 
 		//Deviation logic control compressor
-		if(is_rtd_started())
+		if(tem_roll_enough_data())
 		{
 			if(setting.temperature <= setting.setpoint_freezer) //Reach setpoint -> Off compressor
 			{
@@ -597,26 +608,19 @@ void main_task(void)
 	switch((uint8_t)lcd_state)
 	{
 		case LCD_MAIN_STATE:
-				//Check current value is differ from lcd value -> update lcd
-				if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
-				{
-					if(lcd.temperature != setting.temperature)
-					{
-						lcd.temperature = setting.temperature;
-						interval_count.temper = 0;
-						lcd_interface_show(lcd_state);
-					}
-				}
-
-				if(lcd.op_mode != setting.op_mode || lcd.pwr_mode != setting.pwr_mode
+				if(lcd.op_mode != setting.op_mode
+				  || lcd.pwr_mode != setting.pwr_mode
 				  || lcd.bat_state != setting.bat_state
-				  || lcd.bat_value != setting.bat_value || lcd.spk_mode != setting.spk_mode
-				  || lcd.bat_signal != setting.bat_signal || lcd.onoff != setting.onoff);
+				  || lcd.bat_value != setting.bat_value
+				  || lcd.spk_mode != setting.spk_mode
+				  || lcd.bat_signal != setting.bat_signal
+				  || lcd.onoff != setting.onoff
+                  || lcd.temperature != setting.temperature);
 				{
 					//Update lcd main frame
 					lcd.op_mode = setting.op_mode;
 					lcd.pwr_mode = setting.pwr_mode;
-//					lcd.temperature = setting.temperature;
+					lcd.temperature = setting.temperature;
 					lcd.bat_state = setting.bat_state;
 					lcd.bat_value = setting.bat_value;
 					lcd.spk_mode = setting.spk_mode;
@@ -761,6 +765,8 @@ void main_app_init(void)
 	flash_mgt_read((uint32_t *)&setting, sizeof(lcd_inter_t));
 	//Load all current param to lcd param
 	memcpy((uint8_t *)&lcd,(uint8_t *)&setting, sizeof(lcd_inter_t));
+	//Reset temperature to 0
+	lcd.temperature = 0;
 	//Get power mode
 	setting.pwr_mode = get_power_mode();
 	//LCD ui
