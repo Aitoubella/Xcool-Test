@@ -402,13 +402,13 @@ void main_task(void)
 	if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
 	{
 		interval_count.temper = 0;
-		tem_roll_put(rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR) + setting.temp_offset);
+		tem_roll_put(rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR));
 	}
 
 
 
-	setting.temperature = (int16_t)round(tem_roll_get());
-	setting.second_temperature = (int16_t) round((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)) + setting.temp_offset);
+	setting.temperature = (int16_t)round(tem_roll_get()) + setting.temp_offset;
+	setting.second_temperature = (int16_t) round((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
 	//Get bat status
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();
