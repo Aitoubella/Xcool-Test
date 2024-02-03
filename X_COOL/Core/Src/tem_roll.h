@@ -16,7 +16,8 @@
 typedef struct
 {
 	double total;
-	double last_sample;
+	double sample[MAX_SAMPLE_TEM];
+	uint32_t index;
 	uint32_t sample_count;
 }tem_roll_t;
 

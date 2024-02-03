@@ -14,18 +14,19 @@ tem_roll_t tem_roll = {.sample_count = 1};
 
 void tem_roll_put(double cur_tem)
 {
-	tem_roll.total += cur_tem;
-	tem_roll.total -= tem_roll.last_sample;
+	tem_roll.sample[tem_roll.index % MAX_SAMPLE_TEM] = cur_tem;
+	tem_roll.index ++;
 	tem_roll.sample_count += 1;
-	if(tem_roll.sample_count > MAX_SAMPLE_TEM)
-	{
-		tem_roll.last_sample = cur_tem;
-	}
 }
 
 
 double tem_roll_get(void)
 {
+	tem_roll.total = 0;
+	for(uint8_t i = 0; i < MAX_SAMPLE_TEM; i++)
+	{
+		tem_roll.total += tem_roll.sample[i];
+	}
 	if(tem_roll.sample_count <= MAX_SAMPLE_TEM)
 	{
 		return tem_roll.total/(tem_roll.sample_count - 1);
