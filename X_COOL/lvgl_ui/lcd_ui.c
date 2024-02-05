@@ -118,7 +118,7 @@ void lcd_label_set_param(lv_obj_t* label, const char* txt, lv_coord_t x, lv_coor
 }
 
 void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_mode_t pwr_mode, operation_mode_t op_mode,
-		uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal, const char* fw_ver)
+		uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal, const char* fw_ver, cmprsr_state_t cmprsr)
 {
 
 	lcd_ui_t speaker_symbol = FONT_VERDENA_24;
@@ -128,6 +128,7 @@ void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_m
 	lcd_ui_t bat_state = FONT_VERDENA_36;
 	lcd_ui_t bat_symbol = FONT_VERDENA_120;
 	lcd_ui_t ver_symbol = FONT_MONT_16;
+	lcd_ui_t cmprsr_symbol = FONT_VERDENA_LIGHT_24;
 	lcd_set_background_color(screen, BLACK_COLOR);
 
 	if(sp_mode ==  SPEAKER_MODE_ON)
@@ -138,6 +139,13 @@ void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_m
 		lcd_label_set_param(speaker_symbol.obj, LV_SYMBOL_MUTE, -126, -89, speaker_symbol.font, WHITE_COLOR);
 	}
 
+	if(cmprsr == CMPRSR_STATE_ON)
+	{
+		lcd_label_set_param(cmprsr_symbol.obj, CUS_SYMBOL_SNOW, -90, -89, cmprsr_symbol.font, WHITE_COLOR);
+	}else
+	{
+		lcd_hide_label(cmprsr_symbol.obj);
+	}
 	snprintf(temp_buff,MAX_TEMP_CHAR, "%d°C",temperature);
 	lcd_label_set_param(temper.obj, temp_buff, 103, -89, temper.font, WHITE_COLOR);
 

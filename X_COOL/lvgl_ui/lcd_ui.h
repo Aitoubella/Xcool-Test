@@ -16,7 +16,7 @@ LV_FONT_DECLARE( ui_font_verdana704);
 LV_FONT_DECLARE( ui_font_verdana1004);
 LV_FONT_DECLARE( ui_font_verdana1204);
 LV_FONT_DECLARE( ui_font_verdana1404);
-
+LV_FONT_DECLARE( ui_font_verdana244_light);
 #define FONT_MONT_16     {get_label(),&lv_font_montserrat_16}
 #define FONT_VERDENA_24 {get_label(),&ui_font_verdana244} //Font verdena
 #define FONT_VERDENA_36 {get_label(),&ui_font_verdana364} //Font verdena
@@ -25,6 +25,7 @@ LV_FONT_DECLARE( ui_font_verdana1404);
 #define FONT_VERDENA_100 {get_label(),&ui_font_verdana1004} //Font verdena
 #define FONT_VERDENA_120 {get_label(),&ui_font_verdana1204} //Font verdena
 #define FONT_VERDENA_140 {get_label(),&ui_font_verdana1404} //Font verdena
+#define FONT_VERDENA_LIGHT_24 {get_label(),&ui_font_verdana244_light} //snow symbol
 
 typedef enum
 {
@@ -51,6 +52,12 @@ typedef enum
 	BATTERY_STATE_CHARGING = 0,
 	BATTERY_STATE_NOT_CHARGE,
 }battery_state_t;
+
+typedef enum
+{
+	CMPRSR_STATE_OFF = 0,
+	CMPRSR_STATE_ON,
+}cmprsr_state_t;
 
 typedef enum
 {
@@ -215,7 +222,7 @@ void lcd_ui_clear(void);
 void lcd_ui_load_screen(void);
 void lcd_setting(setting_t setting);
 void lcd_main_screen_screen(speaker_mode_t sp_mode, int16_t temperature, power_mode_t pwr_mode, operation_mode_t op_mode,
-		uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal,const char* fw_ver);
+		uint8_t bat_value, battery_state_t bat_st, battery_signal_t bat_signal,const char* fw_ver,cmprsr_state_t cmprsr);
 void lcd_operation_mode_screen(uint8_t operation_mode);
 void lcd_turn_off_unit(display_unit_t value);
 void lcd_setting_datetime(setting_datetime_t index, datetime_t* time);

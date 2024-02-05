@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 140 px
  * Bpp: 4
- * Opts: --no-compress --no-prefilter --bpp 4 --size 140 --font fa-thin-100.ttf -r 62020,62016 --format lvgl -o ui_font_verdana1404.c --force-fast-kern-format
+ * Command lv_font_conv --no-compress --no-prefilter --bpp 4 --size 140 --font fa-thin-100.ttf -r 62020,62016 --format lvgl -o ui_font_verdana1404.c --force-fast-kern-format
  ******************************************************************************/
 
 
