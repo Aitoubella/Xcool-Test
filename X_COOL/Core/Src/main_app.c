@@ -129,7 +129,7 @@ extern char USERPath[4];
 extern char USBHPath[4];
 char file_name_src[20];
 char file_name_dst[20];
-lcd_inter_t setting = {
+lcd_inter_t setting  = {
 	.op_mode = OPERATION_MODE_FREEZER,
 	.pwr_mode = POWER_MODE_AC,
 	.spk_mode = SPEAKER_MODE_ON,
@@ -161,7 +161,6 @@ extern lcd_state_t lcd_state;
 
 uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 {
-
 	switch((uint8_t)evt)
 	{
 	   case LCD_SET_OPERATION_MODE_EVT:
@@ -557,9 +556,11 @@ void main_task(void)
 	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 	if(ctl.cmprsr == TURN_ON)
 	{
+		setting.cmprsr = CMPRSR_STATE_ON;
 		cmprsr_power_on();
 	}else
 	{
+		setting.cmprsr = CMPRSR_STATE_OFF;
 		cmprsr_power_off();
 	}
 	if(ctl.cmprsr_fan == TURN_ON) cmprsr_fan_on();
@@ -615,7 +616,8 @@ void main_task(void)
 				  || lcd.spk_mode != setting.spk_mode
 				  || lcd.bat_signal != setting.bat_signal
 				  || lcd.onoff != setting.onoff
-                  || lcd.temperature != setting.temperature);
+                  || lcd.temperature != setting.temperature
+				  || lcd.cmprsr != setting.cmprsr);
 				{
 					//Update lcd main frame
 					lcd.op_mode = setting.op_mode;
@@ -625,6 +627,7 @@ void main_task(void)
 					lcd.bat_value = setting.bat_value;
 					lcd.spk_mode = setting.spk_mode;
 					lcd.bat_signal = setting.bat_signal;
+					lcd.cmprsr = setting.cmprsr;
 					//Reload main frame
 					lcd_interface_show(lcd_state);
 				}

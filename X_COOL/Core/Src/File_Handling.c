@@ -19,7 +19,7 @@ FATFS *pUSBHFatFS;
 DWORD fre_clust;
 uint32_t total, free_space;
 
-uint8_t usb_buffer[MAX_USB_BUFFER];
+uint8_t usb_buffer[MAX_USB_BUFFER] __attribute__((section(".ram2")));
 static char path[257];
 void Send_Uart (char *string)
 {

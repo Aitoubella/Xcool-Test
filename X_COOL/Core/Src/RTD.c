@@ -39,7 +39,7 @@ ADC_ChannelConfTypeDef RTD_ADC_LIST[] = {RTD5_ADC,RTD6_ADC, RTD1_ADC, RTD2_ADC, 
 uint32_t adc_buff[RTD_MAX_CHANNEL];
 uint32_t adc_total[RTD_MAX_CHANNEL] = {0};
 uint32_t adc_voltage[RTD_MAX_CHANNEL] = {0};
-uint32_t adc_average[RTD_MAX_CHANNEL] = {0};
+uint32_t adc_average[RTD_MAX_CHANNEL]= {0};
 //double temperature_result[RTD_MAX_CHANNEL];
 double temperature_result[RTD_MAX_CHANNEL];
 event_id rtd_id;

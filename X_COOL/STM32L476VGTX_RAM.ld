@@ -175,6 +175,14 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
+  /* Constant data into "RAM2" Ram type memory */
+	.ram2 :
+	{
+	. = ALIGN(4);
+	*(.ram2)
+	*(.ram2*)
+	}>RAM2
+
   /* Remove information from the compiler libraries */
   /DISCARD/ :
   {

@@ -275,8 +275,12 @@ extern "C" {
 #if !defined LV_SYMBOL_DUMMY
 /** Invalid symbol at (U+F8FF). If written before a string then `lv_img` will show it as a label*/
 #define LV_SYMBOL_DUMMY           "\xEF\xA3\xBF"
+
 #endif
 
+#if !defined CUS_SYMBOL_SNOW
+#define CUS_SYMBOL_SNOW          "\xEF\x8B\x9C" /*62172,0xF2DC*/
+#endif
 /*
  * The following list is generated using
  * cat src/font/lv_symbol_def.h | sed -E -n 's/^#define\s+LV_(SYMBOL_\w+).*".*$/    _LV_STR_\1,/p'

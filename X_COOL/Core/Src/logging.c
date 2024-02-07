@@ -3,12 +3,12 @@
 #include <string.h>
 #include "printf.h"
 #include "freeRTOS.h"
-const char* op_mode_str[] = { [OPERATION_MODE_FRIDEGE] = "MODE FRIDGE", [OPERATION_MODE_FREEZER] = "MODE FREEZER" };
-const char* power_mode_str[] = {[POWER_MODE_BAT] = "BAT", [POWER_MODE_DC] = "DC", [POWER_MODE_AC] = "AC"};
-const char* speaker_mode_str[] = {[SPEAKER_MODE_OFF] = "SPEAKER MUTE", [SPEAKER_MODE_ON] = "SPEAKER ON"};
-const char* bat_state_str[] = {[BATTERY_STATE_CHARGING] = "CHARGING", [BATTERY_STATE_NOT_CHARGE] = "NOT CHARGE"};
-const char* warning_type_str[] = {[WARNING_TYPE_NONE] = "NO WARNING",[WARNING_TYPE_UNDER_MIN_TEMP] = "WARNING UNDER MIN TEMP", [WARNING_TYPE_OVER_MAX_TEMP] = "WARNING OVER MAX TEMP", [WARNING_TYPE_LID_OPEN] = "WARNING LID OPEN"};
-const char* lid_state_str[] = {[LID_CLOSE] = "LID CLOSE", [LID_OPEN] = "LID OPEN"};
+static char* const op_mode_str[]= { [OPERATION_MODE_FRIDEGE] = "MODE FRIDGE", [OPERATION_MODE_FREEZER] = "MODE FREEZER" };
+static char* const power_mode_str[]  = {[POWER_MODE_BAT] = "BAT", [POWER_MODE_DC] = "DC", [POWER_MODE_AC] = "AC"};
+static char* const speaker_mode_str[]   = {[SPEAKER_MODE_OFF] = "SPEAKER MUTE", [SPEAKER_MODE_ON] = "SPEAKER ON"};
+static char* const bat_state_str[] = {[BATTERY_STATE_CHARGING] = "CHARGING", [BATTERY_STATE_NOT_CHARGE] = "NOT CHARGE"};
+static char* const warning_type_str[] = {[WARNING_TYPE_NONE] = "NO WARNING",[WARNING_TYPE_UNDER_MIN_TEMP] = "WARNING UNDER MIN TEMP", [WARNING_TYPE_OVER_MAX_TEMP] = "WARNING OVER MAX TEMP", [WARNING_TYPE_LID_OPEN] = "WARNING LID OPEN"};
+static char* const lid_state_str[]  = {[LID_CLOSE] = "LID CLOSE", [LID_OPEN] = "LID OPEN"};
 
 
 

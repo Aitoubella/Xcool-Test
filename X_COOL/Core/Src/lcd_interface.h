@@ -35,6 +35,7 @@ typedef struct
 	lid_state_t lid_state;
 	warning_type_t warning_type;
 	setting_download_data_result download_result;
+	cmprsr_state_t cmprsr;
 }lcd_inter_t;
 
 typedef enum

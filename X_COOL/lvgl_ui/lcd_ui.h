@@ -12,19 +12,19 @@
 LV_FONT_DECLARE( ui_font_verdana244);
 LV_FONT_DECLARE( ui_font_verdana364);
 LV_FONT_DECLARE( ui_font_verdana404);
-LV_FONT_DECLARE( ui_font_verdana704);
-LV_FONT_DECLARE( ui_font_verdana1004);
+//LV_FONT_DECLARE( ui_font_verdana704);
+//LV_FONT_DECLARE( ui_font_verdana1004);
 LV_FONT_DECLARE( ui_font_verdana1204);
-LV_FONT_DECLARE( ui_font_verdana1404);
+//LV_FONT_DECLARE( ui_font_verdana1404);
 LV_FONT_DECLARE( ui_font_verdana244_light);
 #define FONT_MONT_16     {get_label(),&lv_font_montserrat_16}
 #define FONT_VERDENA_24 {get_label(),&ui_font_verdana244} //Font verdena
 #define FONT_VERDENA_36 {get_label(),&ui_font_verdana364} //Font verdena
 #define FONT_VERDENA_40 {get_label(),&ui_font_verdana404} //Font verdena
-#define FONT_VERDENA_70 {get_label(),&ui_font_verdana704} //Font verdena
-#define FONT_VERDENA_100 {get_label(),&ui_font_verdana1004} //Font verdena
+//#define FONT_VERDENA_70 {get_label(),&ui_font_verdana704} //Font verdena
+//#define FONT_VERDENA_100 {get_label(),&ui_font_verdana1004} //Font verdena
 #define FONT_VERDENA_120 {get_label(),&ui_font_verdana1204} //Font verdena
-#define FONT_VERDENA_140 {get_label(),&ui_font_verdana1404} //Font verdena
+//#define FONT_VERDENA_140 {get_label(),&ui_font_verdana1404} //Font verdena
 #define FONT_VERDENA_LIGHT_24 {get_label(),&ui_font_verdana244_light} //snow symbol
 
 typedef enum

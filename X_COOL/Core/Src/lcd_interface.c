@@ -888,7 +888,7 @@ void lcd_interface_show(lcd_state_t state)
 		lcd_turn_off_unit(DISPLAY_UINIT_YES);
 		break;
 	case LCD_MAIN_STATE:
-		lcd_main_screen_screen(lcd.spk_mode, lcd.temperature, lcd.pwr_mode, lcd.op_mode, lcd.bat_value, lcd.bat_state,lcd.bat_signal,fw_version);
+		lcd_main_screen_screen(lcd.spk_mode, lcd.temperature, lcd.pwr_mode, lcd.op_mode, lcd.bat_value, lcd.bat_state,lcd.bat_signal,fw_version, lcd.cmprsr);
 		break;
 	case LCD_OPERATION_MODE_STATE:
 		lcd_operation_mode_screen(lcd.op_mode);

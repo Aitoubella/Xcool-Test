@@ -38,7 +38,7 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
  *  STATIC VARIABLES
  **********************/
 static lv_disp_draw_buf_t draw_buf_dsc_1;
-static lv_color_t buf_1[MY_DISP_HOR_RES * BUFFER_ROW_LCD];                          /*A buffer for 10 rows*/
+static lv_color_t buf_1[MY_DISP_HOR_RES * BUFFER_ROW_LCD] __attribute__((section(".ram2")));                          /*A buffer for 10 rows*/
 static lv_disp_drv_t disp_drv;                         /*Descriptor of a display driver*/
 
 
