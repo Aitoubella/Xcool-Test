@@ -29,15 +29,8 @@ void DS1307_Init(I2C_HandleTypeDef *hi2c)
  * @param halt Clock halt bit to set, 0 or 1. 0 to start timing, 0 to stop.
  */
 void DS1307_SetClockHalt(uint8_t halt) {
-	uint8_t ch = DS1307_GetRegByte(DS1307_REG_SECOND);
-	if(halt)
-	{
-		ch |= (1<<7);
-	}else
-	{
-		ch &=~ (1<<7);
-	}
-	DS1307_SetRegByte(DS1307_REG_SECOND, ch & 0x7f);
+	uint8_t ch = (halt ? 1 << 7 : 0);
+	DS1307_SetRegByte(DS1307_REG_SECOND, ch | (DS1307_GetRegByte(DS1307_REG_SECOND) & 0x7f));
 }
 
 /**
@@ -283,7 +276,7 @@ HAL_StatusTypeDef DS1307_GetDate(uint8_t* day, uint8_t* month, uint16_t* year)
 	//Convert
 	*day = DS1307_DecodeBCD(temp[0]);//first byte
 	*month = DS1307_DecodeBCD(temp[1]);
-	*year = cen*100 + DS1307_DecodeBCD(temp[2]);
+	*year = cen * 100 + DS1307_DecodeBCD(temp[2]);
 
 	return HAL_OK;
 }
@@ -303,7 +296,7 @@ HAL_StatusTypeDef DS1307_SetDate(uint8_t day, uint8_t month, uint16_t year)
 	//Get 3 byte day,month,year continuously
 	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp , sizeof(temp), DS1307_TIMEOUT);
 	if(status != HAL_OK) return status;
-	//Set byte century
+	//Get byte century
 	temp[0] = DS1307_REG_CENT;
 	temp[1] = year/100;
 	status = I2C_Master_Transmit(_ds1307_ui2c, (uint16_t)(DS1307_I2C_ADDR << 1), temp, 2, DS1307_TIMEOUT);

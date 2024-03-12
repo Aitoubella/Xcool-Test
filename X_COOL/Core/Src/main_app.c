@@ -24,8 +24,6 @@
 #include "button.h"
 #include "tem_roll.h"
 
- #define MAIN_APP_DEBUG
-
 #define MAIN_TASK_TICK_MS         500 //ms
 #define RTC_TASK_TICK_MS          1000
 #define BAT_OUT_OF_VALUE     7 //in perent
@@ -174,28 +172,13 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 		   break;
 		case LCD_SET_DATETIME_EVT:
 			datetime_t* dt = (datetime_t *)value;
-			printf("\nSet Date:%d-%d-%d, Time: %d:%d:%d",dt->year,dt->month,dt->day,dt->hour,dt->minute,dt->second);
-			uint8_t error = 5;
 			//Check save data to DS1307 ok
-			while(error -- > 0) //try set time 5 times
+			if((DS1307_SetDate(dt->day, dt->month, dt->year) == HAL_OK) &&
+				(DS1307_SetTime(dt->hour, dt->minute, dt->second) == HAL_OK))
 			{
-				if(DS1307_SetTime(dt->hour, dt->minute, dt->second) == HAL_OK)
-				{
-					memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
-					printf("\nSet Time success! \nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
-					break;
-				}
+				memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
 			}
-			error = 5;
-			while(error -- > 0) //try set time 5 times
-			{
-				if((DS1307_SetDate(dt->day, dt->month, dt->year) == HAL_OK))
-				{
-					memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
-					printf("\nSet date success! \nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
-					break;
-				}
-			}
+
 			break;
 
 		case LCD_SET_TEMPERATURE_FRIDGE_SETPOINT_EVT:
@@ -341,26 +324,12 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 
 void rtc_task(void)
 {
-	if((DS1307_GetTime(&setting.datetime.hour, &setting.datetime.minute, &setting.datetime.second) == HAL_OK) && (DS1307_GetDate(&setting.datetime.day, &setting.datetime.month, &setting.datetime.year) == HAL_OK))
+	DS1307_GetDate(&setting.datetime.day, &setting.datetime.month, &setting.datetime.year);
+	if(setting.datetime.year < 2023 || setting.datetime.year > 2100)
 	{
-#ifdef MAIN_APP_DEBUG
-		printf("\nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
-#endif
-//		if(setting.datetime.year < 2023 || setting.datetime.year > 2100)
-//		{
-//#ifdef MAIN_APP_DEBUG
-//			printf("\nYear: %d, Reset year to 2023", setting.datetime.year < 2023);
-//#endif
-//			DS1307_SetYear(2023);
-//		}
+		DS1307_SetYear(2023);
 	}
-#ifdef MAIN_APP_DEBUG
-	else
-	{
-		printf("\nRTC get date error");
-	}
-#endif
-
+	DS1307_GetTime(&setting.datetime.hour, &setting.datetime.minute, &setting.datetime.second);
 }
 
 uint8_t get_bat_value(void)
