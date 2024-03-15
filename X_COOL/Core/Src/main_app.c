@@ -406,8 +406,8 @@ void main_task(void)
 
 
 
-	setting.temperature = (int16_t)round(tem_roll_get()) + setting.temp_offset;
-	setting.second_temperature = (int16_t) round((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
+	setting.temperature = (int16_t)(tem_roll_get()) + setting.temp_offset;
+	setting.second_temperature = (int16_t)((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
 	//Get bat status
 	setting.bat_value = get_bat_value();
 	setting.bat_state = get_bat_state();

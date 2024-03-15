@@ -108,7 +108,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of usbHostTask */
-  osThreadDef(usbHostTask, UsbRunTask, osPriorityNormal, 0, 4096);
+  osThreadDef(usbHostTask, UsbRunTask, osPriorityNormal, 0, 8192);
   usbHostTaskHandle = osThreadCreate(osThread(usbHostTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

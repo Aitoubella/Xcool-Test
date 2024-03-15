@@ -10,10 +10,20 @@
 #include "i2c.h"
 #include "main.h"
 
-#define I2C_DEBUG_PRINT
+
+#define USE_DELAY_FREERTOS
+
+//#define I2C_DEBUG_PRINT
 #ifdef I2C_DEBUG_PRINT
 #include "printf.h"
 #endif
+#ifdef USE_DELAY_FREERTOS
+#include "FreeRTOS.h"
+#include "task.h"
+
+static const uint32_t delay_ms = 1 / portTICK_PERIOD_MS;
+#endif
+
 
 HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData,uint16_t Size, uint32_t Timeout)
 {
@@ -24,6 +34,9 @@ HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddre
 	{
 #ifdef I2C_DEBUG_PRINT
 		printf("\nI2C transmit error: %d",status);
+#endif
+#ifdef USE_DELAY_FREERTOS
+		vTaskDelay(delay_ms);
 #endif
 		HAL_I2C_DeInit(hi2c);
 		HAL_I2C_Init(hi2c);
@@ -41,6 +54,9 @@ HAL_StatusTypeDef I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddre
 		{
 #ifdef I2C_DEBUG_PRINT
 		printf("\nI2C not ready error");
+#endif
+#ifdef USE_DELAY_FREERTOS
+		vTaskDelay(delay_ms);
 #endif
 			HAL_I2C_DeInit(hi2c);
 			HAL_I2C_Init(hi2c);
@@ -61,6 +77,9 @@ HAL_StatusTypeDef I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddres
 #ifdef I2C_DEBUG_PRINT
 		printf("\nI2C receive error: %d",status);
 #endif
+#ifdef USE_DELAY_FREERTOS
+		vTaskDelay(delay_ms);
+#endif
 		HAL_I2C_DeInit(hi2c);
 		HAL_I2C_Init(hi2c);
 		return status;
@@ -78,6 +97,9 @@ HAL_StatusTypeDef I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddres
 		{
 #ifdef I2C_DEBUG_PRINT
 			printf("\nI2C not ready error");
+#endif
+#ifdef USE_DELAY_FREERTOS
+		vTaskDelay(delay_ms);
 #endif
 			HAL_I2C_DeInit(hi2c);
 			HAL_I2C_Init(hi2c);
