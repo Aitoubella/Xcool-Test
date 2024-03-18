@@ -8,8 +8,7 @@
 #ifndef SRC_TEM_ROLL_H_
 #define SRC_TEM_ROLL_H_
 #include <stdint.h>
-#include <math.h>
-
+#include "RTD.h"
 
 #define MAX_SAMPLE_TEM           5
 
@@ -23,8 +22,8 @@ typedef struct
 
 
 
-void tem_roll_put(double cur_tem);
-double tem_roll_get(void);
-uint8_t tem_roll_enough_data(void);
+void tem_roll_put(rtd_t channel, double cur_tem);
+double tem_roll_get(rtd_t channel);
+uint8_t tem_roll_enough_data(rtd_t channel);
 
 #endif /* SRC_TEM_ROLL_H_ */

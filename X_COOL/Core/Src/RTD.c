@@ -19,7 +19,7 @@
 #endif
 
 #define ADC_VREF_mV           3359       //Voltage adc in mV
-#define RTD_MAX_CHANNEL       6
+
 
 bool rtd_init_done = false;
 
@@ -37,25 +37,35 @@ bool rtd_init_done = false;
 ADC_ChannelConfTypeDef RTD_ADC_LIST[] = {RTD5_ADC,RTD6_ADC, RTD1_ADC, RTD2_ADC, RTD3_ADC, RTD4_ADC};
 #endif
 uint32_t adc_buff[RTD_MAX_CHANNEL];
-uint32_t adc_total[RTD_MAX_CHANNEL] = {0};
-uint32_t adc_voltage[RTD_MAX_CHANNEL] = {0};
-uint32_t adc_average[RTD_MAX_CHANNEL]= {0};
+//uint32_t adc_total[RTD_MAX_CHANNEL] = {0};
+//uint32_t adc_voltage[RTD_MAX_CHANNEL] = {0};
+//uint32_t adc_average[RTD_MAX_CHANNEL]= {0};
 //double temperature_result[RTD_MAX_CHANNEL];
 double temperature_result[RTD_MAX_CHANNEL];
 event_id rtd_id;
 #define RES_OFFSET_CALIB     60
-//2118  2852
-//      4096
-//0.00375 ±0.000029 ohm -> 1 kohm  0c
-//
+
 
 #define SAMPLE_MAX_COUNT    500
 uint32_t sample_count = 0;
 
 
+/*Get value in range: -50 to 50 °C-> 750 to 1300ohm->1500 to 2600 mV->1829 to 3170 ADC value*/
+#define ADC_LIMIT_MIN   1829
+#define ADC_LIMIT_MAX   3170
+
+typedef struct
+{
+	uint32_t total;
+	uint32_t voltage;
+	uint32_t average;
+	uint32_t ohm;
+	uint32_t count;
+	uint8_t is_filter;
+}adc_sample_t;
 
 
-
+static adc_sample_t adc[RTD_MAX_CHANNEL];
 
 /*
 Constant        1000 Ω              100 Ω
@@ -147,11 +157,10 @@ void rtd_task(void)
 #else
 	for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i ++)
 	{
-		adc_average[i] /= SAMPLE_MAX_COUNT;
-		adc_voltage[i] = adc_to_mV(adc_average[i]);
-		adc_average[i] = mV_to_ohm(adc_voltage[i]) + RES_OFFSET_CALIB;
+		adc[i].voltage = adc_to_mV(adc[i].average);
+		adc[i].ohm = mV_to_ohm(adc[i].voltage) + RES_OFFSET_CALIB;
 
-		d =  (adc_average[i]/R0 - 1)*1000000000000/6;
+		d =  (adc[i].ohm/R0 - 1)*1000000000000/6;
 		DComplex *result = solve_quartic(a,b,c,d);
 
 		temperature_result[i] = creal(result[3]);
@@ -169,7 +178,7 @@ double rtd_get_temperature(rtd_t rtd)
 
 uint32_t rtd_get_adc_voltage(rtd_t rtd)
 {
-	return adc_voltage[rtd];
+	return adc[rtd].voltage;
 }
 
 bool is_rtd_started(void)
@@ -200,18 +209,32 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 #endif
 	for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i++)
 	{
-		adc_total[i] += adc_buff[i];
+		if(adc_buff[i] > ADC_LIMIT_MIN && adc_buff[i] < ADC_LIMIT_MAX && adc[i].is_filter) //Filter and get value
+		{
+			adc[i].total += adc_buff[i];
+			adc[i].count ++; //Increase count
+		}
 	}
 
 	sample_count++;
-	if(sample_count >= SAMPLE_MAX_COUNT)
+	if(sample_count >= SAMPLE_MAX_COUNT) //Reach max sample count
 	{
-		memcpy((uint8_t *)adc_average, (uint8_t *)adc_total,RTD_MAX_CHANNEL * 4);
-		event_active(&rtd_id);
-		memset((uint8_t *)adc_total, 0, RTD_MAX_CHANNEL * 4);
+		for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i++)
+		{
+			if(adc[i].count > 0) adc[i].average = adc[i].total/adc[i].count; //Get adc average value
+			adc[i].total = 0;  //Reset adc sum value
+			adc[i].count = 0; //Reset cound value
+			event_active(&rtd_id);
+		}
 		sample_count = 0;
 	}
 }
 
-
+/**
+ * Set channel for apply filter tempreature value -50 to 50 °C
+ * */
+void rtd_add_filter(rtd_t channel)
+{
+	adc[channel].is_filter = 1;
+}
 

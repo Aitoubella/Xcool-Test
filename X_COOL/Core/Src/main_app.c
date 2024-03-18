@@ -46,6 +46,8 @@ double limit_min = 0;
 #define LID_SWITCH_SENSOR                     RTD4
 #define AMBIENT_TEMPERATURE_SENSOR            RTD5
 
+#define TEMPREATURE_LIMIT_MIN                 -20
+#define TEMPREaTURE_LIMIT_MAX                 50
 
 #define LID_CLOSE_DELAY_MINS                   1
 
@@ -401,12 +403,16 @@ void main_task(void)
 	if(interval_count.temper > SECOND_TO_COUNT(TEMPERATURE_SHOW_INTERVAL))
 	{
 		interval_count.temper = 0;
-		tem_roll_put(rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR));
+		double champer_temp = rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR);
+		if(champer_temp > TEMPREATURE_LIMIT_MIN && champer_temp < TEMPREaTURE_LIMIT_MAX)
+		{
+			tem_roll_put(CHAMBER_TEMPERATURES_SENSOR, champer_temp);
+		}
 	}
 
 
 
-	setting.temperature = (int16_t)(tem_roll_get()) + setting.temp_offset;
+	setting.temperature = (int16_t)(tem_roll_get(CHAMBER_TEMPERATURES_SENSOR)) + setting.temp_offset;
 	setting.second_temperature = (int16_t)((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
 	//Get bat status
 	setting.bat_value = get_bat_value();
@@ -435,7 +441,7 @@ void main_task(void)
 		htr_off(); //Heater on in freezer mode,off in refrigerator off
 
 		//Deviation logic control compressor
-		if(tem_roll_enough_data())
+		if(tem_roll_enough_data(CHAMBER_TEMPERATURES_SENSOR))
 		{
 			if(setting.temperature <= setting.setpoint_fridge) //Reach setpoint -> Off compressor
 			{
@@ -467,7 +473,7 @@ void main_task(void)
 		htr_on(); //Heater on in freezer mode,off in refrigerator mode
 
 		//Deviation logic control compressor
-		if(tem_roll_enough_data())
+		if(tem_roll_enough_data(CHAMBER_TEMPERATURES_SENSOR))
 		{
 			if(setting.temperature <= setting.setpoint_freezer) //Reach setpoint -> Off compressor
 			{
@@ -772,6 +778,8 @@ void main_app_init(void)
 	lcd.temperature = 0;
 	//Get power mode
 	setting.pwr_mode = get_power_mode();
+	//Rtd add channel to filter temprature sensor
+	rtd_add_filter(CHAMBER_TEMPERATURES_SENSOR);
 	//LCD ui
 	lcd_ui_init(); //Init lvgl, porting
 	lcd_interface_init(); //Init api and show main frame

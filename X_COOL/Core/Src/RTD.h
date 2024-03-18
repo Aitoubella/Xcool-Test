@@ -9,6 +9,9 @@
 #define SRC_RTD_H_
 #include <stdbool.h>
 #include <stdint.h>
+
+#define RTD_MAX_CHANNEL       6
+
 typedef enum
 {
 	RTD5 = 0,
@@ -21,5 +24,6 @@ typedef enum
 void rtd_init(void);
 double rtd_get_temperature(rtd_t rtd);
 uint32_t rtd_get_adc_voltage(rtd_t rtd);
+void rtd_add_filter(rtd_t channel);
 bool is_rtd_started(void);
 #endif /* SRC_RTD_H_ */

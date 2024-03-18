@@ -10,32 +10,33 @@
 
 #include "tem_roll.h"
 
-tem_roll_t tem_roll = {.sample_count = 1};
+tem_roll_t tem_roll[RTD_MAX_CHANNEL];
 
-void tem_roll_put(double cur_tem)
+void tem_roll_put(rtd_t channel, double cur_tem)
 {
-	tem_roll.sample[tem_roll.index % MAX_SAMPLE_TEM] = cur_tem;
-	tem_roll.index ++;
-	tem_roll.sample_count += 1;
+	tem_roll[channel].sample[tem_roll[channel].index % MAX_SAMPLE_TEM] = cur_tem;
+	tem_roll[channel].index ++;
+	if(tem_roll[channel].sample_count < MAX_SAMPLE_TEM)
+	tem_roll[channel].sample_count += 1;
+
 }
 
 
-double tem_roll_get(void)
+double tem_roll_get(rtd_t channel)
 {
-	tem_roll.total = 0;
-	for(uint8_t i = 0; i < MAX_SAMPLE_TEM; i++)
+	if(tem_roll[channel].sample_count == 0) return 0; //No temperature put yet->return 0
+	//Get total value
+	tem_roll[channel].total = 0;
+	for(uint8_t i = 0; i < tem_roll[channel].sample_count; i++)
 	{
-		tem_roll.total += tem_roll.sample[i];
+		tem_roll[channel].total += tem_roll[channel].sample[i];
 	}
-	if(tem_roll.sample_count <= MAX_SAMPLE_TEM)
-	{
-		return tem_roll.total/(tem_roll.sample_count - 1);
-	}
-	return tem_roll.total/MAX_SAMPLE_TEM;
+	//Return average of total sample
+	return tem_roll[channel].total/tem_roll[channel].sample_count;
 }
 
 
-uint8_t tem_roll_enough_data(void)
+uint8_t tem_roll_enough_data(rtd_t channel)
 {
-	return (tem_roll.sample_count > MAX_SAMPLE_TEM);
+	return (tem_roll[channel].sample_count == MAX_SAMPLE_TEM);
 }
