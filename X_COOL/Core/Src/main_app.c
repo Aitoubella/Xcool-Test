@@ -42,7 +42,7 @@
 double limit_max = 0;
 double limit_min = 0;
 
-#define CHAMBER_TEMPERATURES_SENSOR           RTD6
+#define CHAMBER_TEMPERATURES_SENSOR           RTD1
 #define LID_SWITCH_SENSOR                     RTD4
 #define AMBIENT_TEMPERATURE_SENSOR            RTD5
 
@@ -52,7 +52,7 @@ double limit_min = 0;
 
 #define LID_CLOSE_DELAY_MINS                   1
 
-#define TEMPERATURE_SHOW_INTERVAL              15 //Second
+#define TEMPERATURE_SHOW_INTERVAL              1 //Second
 #define CMPRSR_DELAY_ON_MINS                   1 //Minute
 
 
@@ -577,6 +577,12 @@ void main_task(void)
 
 	//Fan1 control tight to compressor
 	ctl.fan1 = ctl.cmprsr;
+
+	//Internal fan will off in freezer mode
+	if(setting.op_mode == OPERATION_MODE_FREEZER)
+	{
+		ctl.fan1 = TURN_OFF;
+	}
 
 	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 	if(ctl.cmprsr == TURN_ON)
