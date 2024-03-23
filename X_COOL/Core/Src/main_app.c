@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "vRTC";
+const char *fw_version = "v3.9";
 
 typedef enum
 {

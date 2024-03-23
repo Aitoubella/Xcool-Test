@@ -50,9 +50,9 @@ event_id rtd_id;
 uint32_t sample_count = 0;
 
 
-/*Get value in range: -50 to 50 °C-> 750 to 1300ohm->1500 to 2600 mV->1829 to 3170 ADC value*/
-#define ADC_LIMIT_MIN   1829
-#define ADC_LIMIT_MAX   3170
+/*Get value in range: -100 to 50 °C-> 500ohm to 1300ohm->600mV to 3000 mV(+-400mV)->731 to 3657 ADC value*/
+#define ADC_LIMIT_MIN   700
+#define ADC_LIMIT_MAX   3657
 
 typedef struct
 {
@@ -170,11 +170,23 @@ void rtd_task(void)
 #endif
 }
 
+//#define USE_AUTO_TEST_TEMP 1
+#ifdef USE_AUTO_TEST_TEMP
+#define MAX_SAMPLE_INPUT  7
+//test
+uint32_t test_count = 0;
+double list_test_temp[MAX_SAMPLE_INPUT] = {-15,-16,-14,-16,-15,-16,-17};
+double rtd_get_temperature(rtd_t rtd)
+{
+	test_count++;
+	return list_test_temp[test_count % MAX_SAMPLE_INPUT];
+}
+#else
 double rtd_get_temperature(rtd_t rtd)
 {
 	return temperature_result[rtd];
 }
-
+#endif
 
 uint32_t rtd_get_adc_voltage(rtd_t rtd)
 {
