@@ -42,11 +42,11 @@
 double limit_max = 0;
 double limit_min = 0;
 
-#define CHAMBER_TEMPERATURES_SENSOR           RTD1
+#define CHAMBER_TEMPERATURES_SENSOR           RTD6
 #define LID_SWITCH_SENSOR                     RTD4
 #define AMBIENT_TEMPERATURE_SENSOR            RTD5
 
-#define MAX_TEMPERATURE_DIFF_FILTER           15
+#define MAX_TEMPERATURE_DIFF_FILTER           7
 #define MIN_CHAMBER_TEMPERATURE_LIMIT         -30
 #define MAX_CHAMBER_TEMPERATURE_LIMIT         50
 
@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v3.9";
+const char *fw_version = "v3.2";
 
 typedef enum
 {
@@ -158,9 +158,6 @@ lcd_inter_t setting  = {
 };
 extern lcd_inter_t lcd;
 extern lcd_state_t lcd_state;
-
-static double old_chamber_temperature = 0;
-
 
 uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 {
@@ -409,19 +406,18 @@ void main_task(void)
 			//Get current temperature
 			double cur_chamber_temp = rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR);
 			//Check temperature is value?
-			if(cur_chamber_temp > MIN_CHAMBER_TEMPERATURE_LIMIT && cur_chamber_temp < MAX_CHAMBER_TEMPERATURE_LIMIT)
+			if(cur_chamber_temp >= MIN_CHAMBER_TEMPERATURE_LIMIT && cur_chamber_temp <= MAX_CHAMBER_TEMPERATURE_LIMIT)
 			{
-				if(old_chamber_temperature) //Check old temperature is already set?
+				if(tem_roll_enough_data(CHAMBER_TEMPERATURES_SENSOR)) //Check enough data in rolling buffer->apply filter
 				{
 					//Check if temperature is change in range.
-					if(abs(cur_chamber_temp - old_chamber_temperature) <= MAX_TEMPERATURE_DIFF_FILTER)
+					if(abs(setting.temperature - cur_chamber_temp) <= MAX_TEMPERATURE_DIFF_FILTER)
 					{
 						tem_roll_put(CHAMBER_TEMPERATURES_SENSOR, cur_chamber_temp);
-						old_chamber_temperature = cur_chamber_temp;
 					}
-				}else //Set old temperature
+				}else //Not enough data-> just push data to rolling temperature
 				{
-					old_chamber_temperature = cur_chamber_temp;
+					tem_roll_put(CHAMBER_TEMPERATURES_SENSOR, cur_chamber_temp);
 				}
 			}
 
