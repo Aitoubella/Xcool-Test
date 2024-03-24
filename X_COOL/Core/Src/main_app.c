@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v3.2";
+const char *fw_version = "v3.4";
 
 typedef enum
 {
@@ -370,8 +370,13 @@ lid_state_t get_lid_state(void)
 	}
 	return LID_OPEN;
 }
-
-
+#define   K               0.5
+//k: (0.0 – 1.0)
+double expRunningAverage(double curVal,double newVal)
+{
+  curVal += (newVal - curVal) * K;
+  return curVal;
+}
 
 
 
@@ -404,7 +409,7 @@ void main_task(void)
 		if(is_rtd_started())//Wait util rtc started done
 		{
 			//Get current temperature
-			double cur_chamber_temp = rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR);
+			double cur_chamber_temp = rtd_get_temperature(CHAMBER_TEMPERATURES_SENSOR) + setting.temp_offset;
 			//Check temperature is value?
 			if(cur_chamber_temp >= MIN_CHAMBER_TEMPERATURE_LIMIT && cur_chamber_temp <= MAX_CHAMBER_TEMPERATURE_LIMIT)
 			{
@@ -420,14 +425,12 @@ void main_task(void)
 					tem_roll_put(CHAMBER_TEMPERATURES_SENSOR, cur_chamber_temp);
 				}
 			}
-
-
 		}
 	}
 
 
 
-	setting.temperature = (int16_t)(tem_roll_get(CHAMBER_TEMPERATURES_SENSOR)) + setting.temp_offset;
+	setting.temperature = expRunningAverage(setting.temperature, (tem_roll_get(CHAMBER_TEMPERATURES_SENSOR)));
 	setting.second_temperature = (int16_t)((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
 	//Get bat status
 	setting.bat_value = get_bat_value();

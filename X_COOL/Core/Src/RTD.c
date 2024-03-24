@@ -20,7 +20,7 @@
 
 #define ADC_VREF_mV           3359       //Voltage adc in mV
 
-
+#define SAMPLE_MAX_COUNT      512
 bool rtd_init_done = false;
 
 #define RTD_ADC_USE_DMA  1
@@ -36,7 +36,7 @@ bool rtd_init_done = false;
 
 ADC_ChannelConfTypeDef RTD_ADC_LIST[] = {RTD5_ADC,RTD6_ADC, RTD1_ADC, RTD2_ADC, RTD3_ADC, RTD4_ADC};
 #endif
-uint32_t adc_buff[RTD_MAX_CHANNEL];
+uint16_t adc_buff[RTD_MAX_CHANNEL*SAMPLE_MAX_COUNT];
 //uint32_t adc_total[RTD_MAX_CHANNEL] = {0};
 //uint32_t adc_voltage[RTD_MAX_CHANNEL] = {0};
 //uint32_t adc_average[RTD_MAX_CHANNEL]= {0};
@@ -46,7 +46,7 @@ event_id rtd_id;
 #define RES_OFFSET_CALIB     60
 
 
-#define SAMPLE_MAX_COUNT    500
+
 uint32_t sample_count = 0;
 
 
@@ -206,8 +206,7 @@ void rtd_init(void)
 	event_add(rtd_task, &rtd_id, 1);
 
 #ifdef RTD_ADC_USE_DMA
-	HAL_ADC_Start_DMA(&hadc1, adc_buff, RTD_MAX_CHANNEL);
-
+	HAL_ADC_Start_DMA(&hadc1,(uint32_t *)adc_buff, RTD_MAX_CHANNEL*SAMPLE_MAX_COUNT);
 #else
 	event_active(&rtd_id);
 #endif
@@ -219,27 +218,29 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 #ifdef RTD_LOG
 	printf("%d,",adc_buff[RTD6]);
 #endif
-	for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i++)
+	for(uint8_t channel = 0; channel < RTD_MAX_CHANNEL; channel++)
 	{
-		if(adc_buff[i] > ADC_LIMIT_MIN && adc_buff[i] < ADC_LIMIT_MAX && adc[i].is_filter) //Filter and get value
+		for(uint16_t j = 0; j < SAMPLE_MAX_COUNT; j++)
 		{
-			adc[i].total += adc_buff[i];
-			adc[i].count ++; //Increase count
-		}
-	}
+			if(adc[channel].is_filter)
+			{
+				if(adc_buff[channel*j] > ADC_LIMIT_MIN && adc_buff[channel*j] < ADC_LIMIT_MAX ) //Filter and get value
+				{
+					adc[channel].total += adc_buff[channel*j];   //Get sum of total samples
+					adc[channel].count ++; //Increase count      //Calculate number of valid data
+				}
+			}else
+			{
+				adc[channel].total += adc_buff[channel*j];   //Get sum of total samples
+				adc[channel].count ++; //Increase count      //Calculate number of valid data
+			}
 
-	sample_count++;
-	if(sample_count >= SAMPLE_MAX_COUNT) //Reach max sample count
-	{
-		for(uint8_t i = 0; i < RTD_MAX_CHANNEL; i++)
-		{
-			if(adc[i].count > 0) adc[i].average = adc[i].total/adc[i].count; //Get adc average value
-			adc[i].total = 0;  //Reset adc sum value
-			adc[i].count = 0; //Reset cound value
-			event_active(&rtd_id);
 		}
-		sample_count = 0;
+		if(adc[channel].count > 0) adc[channel].average = adc[channel].total/adc[channel].count; //Get adc average value
+		adc[channel].total = 0;  //Reset adc sum value
+		adc[channel].count = 0; //Reset count value
 	}
+	event_active(&rtd_id);
 }
 
 /**
