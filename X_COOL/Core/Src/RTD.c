@@ -60,7 +60,6 @@ typedef struct
 	uint32_t voltage;
 	uint32_t average;
 	uint32_t ohm;
-	uint32_t count;
 	uint8_t is_filter;
 }adc_sample_t;
 
@@ -222,24 +221,22 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	{
 		for(uint16_t j = 0; j < SAMPLE_MAX_COUNT; j++)
 		{
+			uint16_t pos = j*RTD_MAX_CHANNEL + channel;
 			if(adc[channel].is_filter)
 			{
-				if(adc_buff[channel*j] > ADC_LIMIT_MIN && adc_buff[channel*j] < ADC_LIMIT_MAX ) //Filter and get value
+				if(adc_buff[pos] > ADC_LIMIT_MIN && adc_buff[pos] < ADC_LIMIT_MAX ) //Filter and get value
 				{
-					adc[channel].total += adc_buff[channel*j];   //Get sum of total samples
-					adc[channel].count ++; //Increase count      //Calculate number of valid data
+					adc[channel].total += adc_buff[pos];   //Get sum of total samples
 				}
 			}else
 			{
-				adc[channel].total += adc_buff[channel*j];   //Get sum of total samples
-				adc[channel].count ++; //Increase count      //Calculate number of valid data
+				adc[channel].total += adc_buff[pos];   //Get sum of total samples
 			}
-
 		}
-		if(adc[channel].count > 0) adc[channel].average = adc[channel].total/adc[channel].count; //Get adc average value
+		adc[channel].average = adc[channel].total/SAMPLE_MAX_COUNT; //Get adc average value
 		adc[channel].total = 0;  //Reset adc sum value
-		adc[channel].count = 0; //Reset count value
 	}
+
 	event_active(&rtd_id);
 }
 

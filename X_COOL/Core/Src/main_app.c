@@ -2,7 +2,7 @@
  * main_app.c
  *
  *  Created on: Nov 3, 2023
- *      Author: Loc
+ *      
  */
 
 
@@ -42,7 +42,7 @@
 double limit_max = 0;
 double limit_min = 0;
 
-#define CHAMBER_TEMPERATURES_SENSOR           RTD6
+#define CHAMBER_TEMPERATURES_SENSOR           RTD1
 #define LID_SWITCH_SENSOR                     RTD4
 #define AMBIENT_TEMPERATURE_SENSOR            RTD5
 
@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v3.4";
+const char *fw_version = "v42";
 
 typedef enum
 {
@@ -802,8 +802,6 @@ void main_app_init(void)
 	lcd.temperature = 0;
 	//Get power mode
 	setting.pwr_mode = get_power_mode();
-	//Rtd add channel to filter temprature sensor
-	rtd_add_filter(CHAMBER_TEMPERATURES_SENSOR);
 	//LCD ui
 	lcd_ui_init(); //Init lvgl, porting
 	lcd_interface_init(); //Init api and show main frame
