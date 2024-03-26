@@ -2,7 +2,7 @@
  * main_app.c
  *
  *  Created on: Nov 3, 2023
- *       
+ *      Author: Loc
  */
 
 
@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v43";
+const char *fw_version = "v1.45";
 
 typedef enum
 {
@@ -533,7 +533,7 @@ void main_task(void)
 		//when lid is opened, compressor, condenser fan and chamber fan turned off.
 		ctl.cmprsr = TURN_OFF;
 		ctl.cmprsr_fan = TURN_OFF;
-		ctl.fan2 = TURN_OFF;
+//		ctl.fan2 = TURN_OFF;   //"In freezer mode Fan 2 is always off. In fridge mode fan 2 is always on 26/03/2024
 		ctl.fan1 = TURN_OFF;
 	}else //Lid close
 	{
@@ -582,7 +582,9 @@ void main_task(void)
 	if(setting.op_mode == OPERATION_MODE_FREEZER)
 	{
 		ctl.fan1 = TURN_OFF;
+		ctl.fan2 = TURN_OFF;  //In freezer mode Fan 2 is always off. In fridge mode fan 2 is always on 26/03/2024
 	}
+
 
 	ctl_pre.cmprsr = ctl.cmprsr;//Save back up
 	if(ctl.cmprsr == TURN_ON)
