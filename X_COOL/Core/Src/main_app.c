@@ -2,7 +2,7 @@
  * main_app.c
  *
  *  Created on: Nov 3, 2023
- *      
+ *       
  */
 
 
@@ -58,7 +58,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v42";
+const char *fw_version = "v43";
 
 typedef enum
 {
@@ -521,7 +521,8 @@ void main_task(void)
 
 	//Chamber fan always on: change in BUGID:17 Leave F2 running on all power modes
 	ctl.fan2 = TURN_ON;
-
+	//Fan1 is always on
+	ctl.fan1 = TURN_ON;
 
 	//Lid check open
 	if(setting.lid_state == LID_OPEN)
@@ -533,6 +534,7 @@ void main_task(void)
 		ctl.cmprsr = TURN_OFF;
 		ctl.cmprsr_fan = TURN_OFF;
 		ctl.fan2 = TURN_OFF;
+		ctl.fan1 = TURN_OFF;
 	}else //Lid close
 	{
 		alarm_count.lid_open = 0;
@@ -574,8 +576,7 @@ void main_task(void)
 	setting.pwr_mode = get_power_mode(); //Need to put this logic after check switch power source
 	if(interval_count.cmprsr > 0) interval_count.cmprsr --;
 
-	//Fan1 control tight to compressor
-	ctl.fan1 = ctl.cmprsr;
+
 
 	//Internal fan will off in freezer mode
 	if(setting.op_mode == OPERATION_MODE_FREEZER)
