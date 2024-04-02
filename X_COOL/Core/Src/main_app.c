@@ -2,7 +2,7 @@
  * main_app.c
  *
  *  Created on: Nov 3, 2023
- *      Author: Loc
+ *       
  */
 
 
@@ -23,6 +23,8 @@
 #include "ili9341.h"
 #include "button.h"
 #include "tem_roll.h"
+
+#define   MAIN_APP_DEBUG    1
 
 #define MAIN_TASK_TICK_MS         500 //ms
 #define RTC_TASK_TICK_MS          1000
@@ -58,7 +60,7 @@ double limit_min = 0;
 
 
 #define POWER_12V_RESET_INTERVAL              60 //Second
-const char *fw_version = "v1.45";
+const char *fw_version = "v46";
 
 typedef enum
 {
@@ -159,6 +161,7 @@ lcd_inter_t setting  = {
 extern lcd_inter_t lcd;
 extern lcd_state_t lcd_state;
 
+
 uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 {
 	switch((uint8_t)evt)
@@ -172,13 +175,28 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 		   break;
 		case LCD_SET_DATETIME_EVT:
 			datetime_t* dt = (datetime_t *)value;
+			printf("\nSet Date:%d-%d-%d, Time: %d:%d:%d",dt->year,dt->month,dt->day,dt->hour,dt->minute,dt->second);
+			uint8_t error = 5;
 			//Check save data to DS1307 ok
-			if((DS1307_SetDate(dt->day, dt->month, dt->year) == HAL_OK) &&
-				(DS1307_SetTime(dt->hour, dt->minute, dt->second) == HAL_OK))
+			while(error -- > 0) //try set time 5 times
 			{
-				memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
+				if(DS1307_SetTime(dt->hour, dt->minute, dt->second) == HAL_OK)
+				{
+					memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
+					printf("\nSet Time success! \nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
+					break;
+				}
 			}
-
+			error = 5;
+			while(error -- > 0) //try set time 5 times
+			{
+				if((DS1307_SetDate(dt->day, dt->month, dt->year) == HAL_OK))
+				{
+					memcpy((uint8_t *)&setting.datetime,(uint8_t *)dt,sizeof(datetime_t));
+					printf("\nSet date success! \nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
+					break;
+				}
+			}
 			break;
 
 		case LCD_SET_TEMPERATURE_FRIDGE_SETPOINT_EVT:
@@ -324,12 +342,18 @@ uint8_t lcd_get_set_cb(lcd_get_set_evt_t evt, void* value)
 
 void rtc_task(void)
 {
-	DS1307_GetDate(&setting.datetime.day, &setting.datetime.month, &setting.datetime.year);
-	if(setting.datetime.year < 2023 || setting.datetime.year > 2100)
+	if((DS1307_GetTime(&setting.datetime.hour, &setting.datetime.minute, &setting.datetime.second) == HAL_OK) && (DS1307_GetDate(&setting.datetime.day, &setting.datetime.month, &setting.datetime.year) == HAL_OK))
 	{
-		DS1307_SetYear(2023);
+#ifdef MAIN_APP_DEBUG
+		printf("\nDate:%d-%d-%d, Time: %d:%d:%d",setting.datetime.year,setting.datetime.month,setting.datetime.day,setting.datetime.hour,setting.datetime.minute,setting.datetime.second);
+#endif
 	}
-	DS1307_GetTime(&setting.datetime.hour, &setting.datetime.minute, &setting.datetime.second);
+#ifdef MAIN_APP_DEBUG
+	else
+	{
+		printf("\nRTC get date error");
+	}
+#endif
 }
 
 uint8_t get_bat_value(void)
@@ -427,8 +451,6 @@ void main_task(void)
 			}
 		}
 	}
-
-
 
 	setting.temperature = expRunningAverage(setting.temperature, (tem_roll_get(CHAMBER_TEMPERATURES_SENSOR)));
 	setting.second_temperature = (int16_t)((rtd_get_temperature(AMBIENT_TEMPERATURE_SENSOR)))  + setting.temp_offset;
@@ -803,6 +825,7 @@ void main_app_init(void)
 	memcpy((uint8_t *)&lcd,(uint8_t *)&setting, sizeof(lcd_inter_t));
 	//Reset temperature to 0
 	lcd.temperature = 0;
+	setting.temperature = 0;
 	//Get power mode
 	setting.pwr_mode = get_power_mode();
 	//LCD ui

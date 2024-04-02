@@ -11,9 +11,9 @@
 #include "main.h"
 
 
-#define USE_DELAY_FREERTOS
+//#define USE_DELAY_FREERTOS
 
-//#define I2C_DEBUG_PRINT
+#define I2C_DEBUG_PRINT
 #ifdef I2C_DEBUG_PRINT
 #include "printf.h"
 #endif
